@@ -1,0 +1,70 @@
+<?xml version="1.0"?>
+<csp_whitelist xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+               xsi:noNamespaceSchemaLocation="urn:magento:module:Magento_Csp:etc/csp_whitelist.xsd">
+    <policies>
+        <!-- Stylesheets: Font Awesome, Bootstrap Icons, Google Fonts, Tailwind -->
+        <policy id="style-src">
+            <values>
+                <value id="cdnjs-cloudflare" type="host">cdnjs.cloudflare.com</value>
+                <value id="cdn-jsdelivr" type="host">cdn.jsdelivr.net</value>
+                <value id="cdn-tailwindcss" type="host">cdn.tailwindcss.com</value>
+                <value id="fonts-googleapis" type="host">fonts.googleapis.com</value>
+                <value id="fonts-bunny" type="host">fonts.bunny.net</value>
+                <value id="fontawesome-com" type="host">*.fontawesome.com</value>
+            </values>
+        </policy>
+
+        <!-- Fonts: Google Fonts, Font Awesome, Bootstrap Icons -->
+        <policy id="font-src">
+            <values>
+                <value id="cdnjs-cloudflare" type="host">cdnjs.cloudflare.com</value>
+                <value id="cdn-jsdelivr" type="host">cdn.jsdelivr.net</value>
+                <value id="fonts-gstatic" type="host">fonts.gstatic.com</value>
+                <value id="fonts-googleapis" type="host">fonts.googleapis.com</value>
+                <value id="fonts-bunny" type="host">fonts.bunny.net</value>
+                <value id="fontawesome-com" type="host">*.fontawesome.com</value>
+            </values>
+        </policy>
+
+        <!-- Scripts: Tailwind CDN, Mollie, reCAPTCHA, CDN libs -->
+        <policy id="script-src">
+            <values>
+                <value id="cdnjs-cloudflare" type="host">cdnjs.cloudflare.com</value>
+                <value id="cdn-jsdelivr" type="host">cdn.jsdelivr.net</value>
+                <value id="cdn-tailwindcss" type="host">cdn.tailwindcss.com</value>
+                <value id="js-mollie" type="host">js.mollie.com</value>
+                <value id="google-recaptcha" type="host">www.google.com</value>
+                <value id="gstatic-recaptcha" type="host">www.gstatic.com</value>
+            </values>
+        </policy>
+
+        <!-- Images -->
+        <policy id="img-src">
+            <values>
+                <value id="hyva-test" type="host">hyva.test</value>
+                <value id="google-analytics" type="host">www.google-analytics.com</value>
+                <value id="googletagmanager" type="host">www.googletagmanager.com</value>
+                <value id="cdn-jsdelivr" type="host">cdn.jsdelivr.net</value>
+            </values>
+        </policy>
+
+        <!-- Connect (AJAX, fetch) -->
+        <policy id="connect-src">
+            <values>
+                <value id="js-mollie" type="host">js.mollie.com</value>
+                <value id="google-analytics" type="host">www.google-analytics.com</value>
+                <value id="googletagmanager" type="host">www.googletagmanager.com</value>
+            </values>
+        </policy>
+
+        <!-- Frames: Payment providers, reCAPTCHA -->
+        <policy id="frame-src">
+            <values>
+                <value id="js-mollie" type="host">js.mollie.com</value>
+                <value id="google-recaptcha" type="host">www.google.com</value>
+                <value id="paypal" type="host">*.paypal.com</value>
+                <value id="braintree" type="host">*.braintreegateway.com</value>
+            </values>
+        </policy>
+    </policies>
+</csp_whitelist>

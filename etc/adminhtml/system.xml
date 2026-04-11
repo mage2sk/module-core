@@ -1,0 +1,90 @@
+<?xml version="1.0"?>
+<!--
+/**
+ * Panth Core - System Configuration
+ */
+-->
+<config xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:noNamespaceSchemaLocation="urn:magento:module:Magento_Config:etc/system_file.xsd">
+    <system>
+        <!-- Panth Tab for ALL Extensions -->
+        <tab id="panth" translate="label" sortOrder="400">
+            <label>🚀 Panth Extensions</label>
+        </tab>
+
+        <!-- Core Module Settings -->
+        <section id="panth_core" translate="label" type="text" sortOrder="10" showInDefault="1" showInWebsite="1" showInStore="1">
+            <label>Core Settings</label>
+            <tab>panth</tab>
+            <resource>Panth_Core::core_config</resource>
+
+            <group id="general" translate="label" type="text" sortOrder="10" showInDefault="1" showInWebsite="1" showInStore="1">
+                <label>General Configuration</label>
+
+                <field id="enabled" translate="label comment" type="select" sortOrder="10" showInDefault="1" showInWebsite="1" showInStore="1">
+                    <label>Enable Panth Core</label>
+                    <source_model>Magento\Config\Model\Config\Source\Yesno</source_model>
+                    <comment>Enable/disable core functionality for all Panth modules.</comment>
+                </field>
+
+                <field id="debug_mode" translate="label comment" type="select" sortOrder="20" showInDefault="1" showInWebsite="1" showInStore="1">
+                    <label>Debug Mode</label>
+                    <source_model>Magento\Config\Model\Config\Source\Yesno</source_model>
+                    <comment>Enable debug logging for Panth modules (not recommended for production).</comment>
+                </field>
+
+                <field id="cache_enabled" translate="label comment" type="select" sortOrder="30" showInDefault="1" showInWebsite="1" showInStore="1">
+                    <label>Enable Caching</label>
+                    <source_model>Magento\Config\Model\Config\Source\Yesno</source_model>
+                    <comment>Enable caching for improved performance.</comment>
+                </field>
+            </group>
+
+            <group id="child_theme_validation" translate="label" type="text" sortOrder="50" showInDefault="1" showInWebsite="0" showInStore="0">
+                <label>Child Theme Validation</label>
+                <comment><![CDATA[Current theme status and validation checks for child theme setup.]]></comment>
+
+                <field id="validation_panel" translate="label" type="text" sortOrder="10" showInDefault="1">
+                    <label></label>
+                    <frontend_model>Panth\Core\Block\Adminhtml\System\Config\ChildThemeValidation</frontend_model>
+                </field>
+            </group>
+
+            <group id="child_theme_guide" translate="label" type="text" sortOrder="60" showInDefault="1" showInWebsite="0" showInStore="0">
+                <label>Child Theme Setup Guide</label>
+                <comment><![CDATA[Step-by-step guide for creating a child theme of Panth/Infotech.]]></comment>
+
+                <field id="guide_content" translate="label" type="text" sortOrder="10" showInDefault="1">
+                    <label></label>
+                    <frontend_model>Panth\Core\Block\Adminhtml\System\Config\ChildThemeGuide</frontend_model>
+                </field>
+            </group>
+
+            <group id="usage_tracking" translate="label comment" type="text" sortOrder="90" showInDefault="1" showInWebsite="0" showInStore="0">
+                <label>Usage Analytics</label>
+                <comment><![CDATA[Help us improve Panth modules by sharing anonymous usage data. <strong>No customer data, orders, or personal information is ever collected.</strong>]]></comment>
+
+                <field id="enabled" translate="label comment" type="select" sortOrder="10" showInDefault="1" showInWebsite="0" showInStore="0">
+                    <label>Share Usage Data with Panth Infotech</label>
+                    <comment><![CDATA[When enabled, your store URL and list of active Panth modules will be shared with Panth Infotech to help provide better support and updates.<br/><br/><strong>Data shared:</strong> Store URL, Magento version, PHP version, list of active Panth modules.<br/><strong>Data NOT shared:</strong> Customer data, orders, products, admin credentials, or any personal information.]]></comment>
+                    <source_model>Magento\Config\Model\Config\Source\Yesno</source_model>
+                </field>
+            </group>
+
+            <group id="info" translate="label" type="text" sortOrder="100" showInDefault="1" showInWebsite="0" showInStore="0">
+                <label>Module Information</label>
+
+                <field id="version" translate="label" type="label" sortOrder="10" showInDefault="1">
+                    <label>Version</label>
+                    <frontend_model>Magento\Config\Block\System\Config\Form\Field\Heading</frontend_model>
+                    <comment><![CDATA[Panth Core v1.0.0 - Base module for all Panth extensions]]></comment>
+                </field>
+
+                <field id="support" translate="label" type="label" sortOrder="20" showInDefault="1">
+                    <label>Support</label>
+                    <comment><![CDATA[For support, please email <a href="mailto:kishansavaliyakb@gmail.com">kishansavaliyakb@gmail.com</a>]]></comment>
+                </field>
+            </group>
+        </section>
+    </system>
+</config>

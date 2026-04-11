@@ -1,0 +1,32 @@
+<?xml version="1.0"?>
+<!--
+/**
+ * Copyright (c) Panth Infotech. All rights reserved.
+ * Admin Event Observers for Panth Core Module
+ */
+-->
+<config xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:noNamespaceSchemaLocation="urn:magento:framework:Event/etc/events.xsd">
+
+    <!-- Track when admin configuration is saved for panth_core section -->
+    <event name="admin_system_config_changed_section_panth_core">
+        <observer name="panth_core_config_save_after"
+                  instance="Panth\Core\Observer\ConfigSaveAfter"/>
+        <observer name="panth_core_universal_auto_disable"
+                  instance="Panth\Core\Observer\UniversalAutoDisable"/>
+        <observer name="panth_core_usage_tracking"
+                  instance="Panth\Core\Observer\Config\UsageTrackingObserver"/>
+    </event>
+
+    <!-- Universal License Check - triggers on admin login -->
+    <event name="admin_user_authenticate_after">
+        <observer name="panth_core_universal_license_check"
+                  instance="Panth\Core\Observer\UniversalLicenseCheck"/>
+    </event>
+
+    <!-- Universal Config Save - triggers on ANY config save -->
+    <event name="admin_system_config_save_after">
+        <observer name="panth_core_universal_config_save"
+                  instance="Panth\Core\Observer\UniversalConfigSave"/>
+    </event>
+</config>

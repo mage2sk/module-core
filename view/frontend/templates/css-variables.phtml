@@ -1,0 +1,18 @@
+<?php
+/**
+ * Panth Core — CSS Variables Output
+ * Outputs :root CSS variables from all registered Panth module theme-config.json files.
+ * Works on both Hyva and Luma themes.
+ *
+ * @var \Panth\Core\ViewModel\ThemeConfig $themeConfig
+ */
+$themeConfig = $block->getData('theme_config');
+if (!$themeConfig) {
+    return;
+}
+$css = $themeConfig->getCssVariables();
+if (!$css) {
+    return;
+}
+?>
+<style id="panth-theme-variables"><?= /* @noEscape */ $css ?></style>

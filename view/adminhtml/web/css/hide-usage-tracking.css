@@ -1,0 +1,26 @@
+/**
+ * Hide the Usage Analytics group in Stores > Configuration > Panth > Core Settings.
+ * The group exists and is fully functional (cron jobs / install notification still run
+ * because config.xml defaults `panth_core/usage_tracking/enabled` to 1), but it is
+ * intentionally hidden from the admin UI so end users don't see or toggle it.
+ *
+ * Surgical selectors only — we target the group head and fieldset by their exact
+ * IDs. We do NOT use ancestor `:has()` without a direct-child combinator, because
+ * that can bubble up and match the outer form wrapper, hiding every config group.
+ */
+
+/* Hide the group's collapsible header bar */
+#panth_core_usage_tracking-head {
+    display: none !important;
+}
+
+/* Hide the group's fieldset (the body) */
+fieldset#panth_core_usage_tracking {
+    display: none !important;
+}
+
+/* Hide the individual field row (defensive — covers both table and div layouts) */
+#row_panth_core_usage_tracking_enabled,
+tr#row_panth_core_usage_tracking_enabled {
+    display: none !important;
+}

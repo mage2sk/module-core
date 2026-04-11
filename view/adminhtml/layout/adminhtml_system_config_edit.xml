@@ -1,0 +1,19 @@
+<?xml version="1.0"?>
+<!--
+/**
+ * Admin System Config Edit Layout
+ * Loads JavaScript for config dependency control
+ *
+ * @category  Panth
+ * @package   Panth_Core
+ */
+-->
+<page xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+      xsi:noNamespaceSchemaLocation="urn:magento:framework:View/Layout/etc/page_configuration.xsd">
+    <head>
+        <!-- Load config dependency control JavaScript on all config pages -->
+        <script src="Panth_Core::js/config-dependency-control.js"/>
+        <!-- Hide the internal Usage Analytics group (still functional server-side) -->
+        <css src="Panth_Core::css/hide-usage-tracking.css"/>
+    </head>
+</page>

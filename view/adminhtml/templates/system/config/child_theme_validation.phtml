@@ -1,0 +1,178 @@
+<?php
+/**
+ * Child Theme Validation Template
+ *
+ * @var \Panth\Core\Block\Adminhtml\System\Config\ChildThemeValidation $block
+ */
+$results = $block->getValidationResults();
+$themeInfo = $results['theme_info'] ?? [];
+$checks = $results['checks'] ?? [];
+$validateUrl = $block->getValidateUrl();
+$rebuildUrl = $block->getRebuildUrl();
+?>
+<style>
+    .panth-validation { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; color: #333; }
+    .panth-validation .theme-info { background: #f8f9fa; border: 1px solid #dee2e6; border-radius: 6px; padding: 16px; margin-bottom: 16px; }
+    .panth-validation .theme-info-row { display: flex; margin: 4px 0; font-size: 13px; }
+    .panth-validation .theme-info-label { font-weight: 600; min-width: 140px; color: #555; }
+    .panth-validation .theme-info-value { color: #333; }
+    .panth-validation .check-list { margin: 0; padding: 0; list-style: none; }
+    .panth-validation .check-item { display: flex; align-items: flex-start; padding: 10px 14px; border: 1px solid #dee2e6; border-radius: 4px; margin-bottom: 6px; font-size: 13px; }
+    .panth-validation .check-icon { font-size: 16px; margin-right: 10px; flex-shrink: 0; line-height: 1.4; }
+    .panth-validation .check-label { font-weight: 600; margin-right: 8px; white-space: nowrap; }
+    .panth-validation .check-pass { background: #d4edda; border-color: #c3e6cb; }
+    .panth-validation .check-fail { background: #f8d7da; border-color: #f5c6cb; }
+    .panth-validation .check-warning { background: #fff3cd; border-color: #ffeaa7; }
+    .panth-validation .check-info { background: #d1ecf1; border-color: #bee5eb; }
+    .panth-validation .actions-bar { margin-top: 16px; display: flex; gap: 10px; }
+    .panth-validation .panth-btn { display: inline-flex; align-items: center; padding: 8px 20px; border: none; border-radius: 4px; font-size: 13px; font-weight: 600; cursor: pointer; transition: background 0.2s; }
+    .panth-validation .panth-btn-primary { background: #1a73e8; color: #fff; }
+    .panth-validation .panth-btn-primary:hover { background: #1557b0; }
+    .panth-validation .panth-btn-secondary { background: #5f6368; color: #fff; }
+    .panth-validation .panth-btn-secondary:hover { background: #3c4043; }
+    .panth-validation .panth-btn:disabled { opacity: 0.6; cursor: not-allowed; }
+    .panth-validation .panth-btn .spinner { display: none; width: 14px; height: 14px; border: 2px solid rgba(255,255,255,0.3); border-top-color: #fff; border-radius: 50%; animation: panth-spin 0.6s linear infinite; margin-right: 8px; }
+    .panth-validation .panth-btn.loading .spinner { display: inline-block; }
+    .panth-validation .result-output { margin-top: 12px; padding: 10px 14px; background: #1e1e1e; color: #d4d4d4; border-radius: 6px; font-family: monospace; font-size: 12px; white-space: pre-wrap; display: none; max-height: 200px; overflow-y: auto; }
+    @keyframes panth-spin { to { transform: rotate(360deg); } }
+</style>
+
+<div class="panth-validation" id="panth-child-theme-validation">
+
+    <h4 style="margin: 0 0 12px; font-size: 15px; color: #1a73e8;">Current Theme Information</h4>
+    <div class="theme-info">
+        <div class="theme-info-row">
+            <span class="theme-info-label">Active Theme:</span>
+            <span class="theme-info-value"><?= $block->escapeHtml($themeInfo['active_theme'] ?? 'Unknown') ?></span>
+        </div>
+        <div class="theme-info-row">
+            <span class="theme-info-label">Parent Chain:</span>
+            <span class="theme-info-value"><?= $block->escapeHtml($themeInfo['parent_chain'] ?? 'Unknown') ?></span>
+        </div>
+        <div class="theme-info-row">
+            <span class="theme-info-label">Hyva Detected:</span>
+            <span class="theme-info-value"><?= $block->escapeHtml(($themeInfo['hyva_detected'] ?? false) ? 'Yes' : 'No') ?></span>
+        </div>
+        <div class="theme-info-row">
+            <span class="theme-info-label">Child Theme:</span>
+            <span class="theme-info-value"><?= $block->escapeHtml(($themeInfo['is_child_theme'] ?? false) ? 'Yes' : 'No') ?></span>
+        </div>
+    </div>
+
+    <h4 style="margin: 0 0 12px; font-size: 15px; color: #1a73e8;">Validation Checks</h4>
+    <ul class="check-list" id="panth-check-list">
+        <?php foreach ($checks as $check): ?>
+            <?php
+            $status = $check['status'] ?? 'info';
+            $icons = ['pass' => "\xe2\x9c\x85", 'fail' => "\xe2\x9d\x8c", 'warning' => "\xe2\x9a\xa0\xef\xb8\x8f", 'info' => "\xe2\x84\xb9\xef\xb8\x8f"];
+            $icon = $icons[$status] ?? $icons['info'];
+            ?>
+            <li class="check-item check-<?= $block->escapeHtmlAttr($status) ?>">
+                <span class="check-icon"><?= /* @noEscape */ $block->escapeHtml($icon) ?></span>
+                <span class="check-label"><?= $block->escapeHtml($check['label'] ?? '') ?>:</span>
+                <span><?= $block->escapeHtml($check['message'] ?? '') ?></span>
+            </li>
+        <?php endforeach; ?>
+    </ul>
+
+    <div class="actions-bar">
+        <button type="button" class="panth-btn panth-btn-primary" id="panth-validate-btn" onclick="panthValidateTheme()">
+            <span class="spinner"></span>
+            Validate Theme Setup
+        </button>
+        <button type="button" class="panth-btn panth-btn-secondary" id="panth-rebuild-btn" onclick="panthRebuildCss()">
+            <span class="spinner"></span>
+            Rebuild Theme CSS
+        </button>
+    </div>
+
+    <div class="result-output" id="panth-result-output"></div>
+</div>
+
+<script>
+function panthValidateTheme() {
+    var btn = document.getElementById('panth-validate-btn');
+    var output = document.getElementById('panth-result-output');
+    btn.classList.add('loading');
+    btn.disabled = true;
+    output.style.display = 'none';
+
+    fetch('<?= $block->escapeJs($validateUrl) ?>', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/x-www-form-urlencoded', 'X-Requested-With': 'XMLHttpRequest'},
+        body: 'form_key=' + encodeURIComponent(FORM_KEY)
+    })
+    .then(function(r) { return r.json(); })
+    .then(function(data) {
+        btn.classList.remove('loading');
+        btn.disabled = false;
+        if (data.success && data.data) {
+            var list = document.getElementById('panth-check-list');
+            list.innerHTML = '';
+            var icons = {pass: "\u2705", fail: "\u274c", warning: "\u26a0\ufe0f", info: "\u2139\ufe0f"};
+            (data.data.checks || []).forEach(function(c) {
+                var li = document.createElement('li');
+                li.className = 'check-item check-' + (c.status || 'info');
+                li.innerHTML = '<span class="check-icon">' + (icons[c.status] || icons.info) + '</span>'
+                    + '<span class="check-label">' + panthEscape(c.label || '') + ':</span> '
+                    + '<span>' + panthEscape(c.message || '') + '</span>';
+                list.appendChild(li);
+            });
+            // Update theme info
+            if (data.data.theme_info) {
+                var info = data.data.theme_info;
+                var rows = document.querySelectorAll('.theme-info-value');
+                if (rows[0]) rows[0].textContent = info.active_theme || 'Unknown';
+                if (rows[1]) rows[1].textContent = info.parent_chain || 'Unknown';
+                if (rows[2]) rows[2].textContent = info.hyva_detected ? 'Yes' : 'No';
+                if (rows[3]) rows[3].textContent = info.is_child_theme ? 'Yes' : 'No';
+            }
+        } else {
+            output.textContent = data.message || 'Validation failed.';
+            output.style.display = 'block';
+        }
+    })
+    .catch(function(e) {
+        btn.classList.remove('loading');
+        btn.disabled = false;
+        output.textContent = 'Request failed: ' + e.message;
+        output.style.display = 'block';
+    });
+}
+
+function panthRebuildCss() {
+    var btn = document.getElementById('panth-rebuild-btn');
+    var output = document.getElementById('panth-result-output');
+    btn.classList.add('loading');
+    btn.disabled = true;
+    output.textContent = 'Building CSS... This may take a moment.';
+    output.style.display = 'block';
+
+    fetch('<?= $block->escapeJs($rebuildUrl) ?>', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/x-www-form-urlencoded', 'X-Requested-With': 'XMLHttpRequest'},
+        body: 'form_key=' + encodeURIComponent(FORM_KEY)
+    })
+    .then(function(r) { return r.json(); })
+    .then(function(data) {
+        btn.classList.remove('loading');
+        btn.disabled = false;
+        var msg = data.message || '';
+        if (data.output) msg += '\n\n' + data.output;
+        output.textContent = msg;
+        output.style.display = 'block';
+    })
+    .catch(function(e) {
+        btn.classList.remove('loading');
+        btn.disabled = false;
+        output.textContent = 'Request failed: ' + e.message;
+        output.style.display = 'block';
+    });
+}
+
+function panthEscape(str) {
+    var d = document.createElement('div');
+    d.textContent = str;
+    return d.innerHTML;
+}
+</script>

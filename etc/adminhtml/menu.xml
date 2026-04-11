@@ -1,0 +1,28 @@
+<?xml version="1.0"?>
+<!--
+/**
+ * Panth Core - Admin Menu
+ * Only defines the top-level "Panth Infotech" parent.
+ * Each module adds its own group + items directly under this parent.
+ */
+-->
+<config xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:noNamespaceSchemaLocation="urn:magento:module:Magento_Backend:etc/menu.xsd">
+    <menu>
+        <!-- Top-level sidebar item -->
+        <add id="Panth_Core::panth_extensions"
+             title="Panth Infotech"
+             module="Panth_Core"
+             sortOrder="20"
+             resource="Panth_Core::panth_extensions"/>
+
+        <!-- Core Settings (direct link) -->
+        <add id="Panth_Core::config"
+             title="Core Settings"
+             module="Panth_Core"
+             sortOrder="1"
+             parent="Panth_Core::panth_extensions"
+             action="adminhtml/system_config/edit/section/panth_core"
+             resource="Panth_Core::core_config"/>
+    </menu>
+</config>

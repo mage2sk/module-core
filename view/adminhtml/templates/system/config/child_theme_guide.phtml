@@ -1,0 +1,204 @@
+<?php
+/**
+ * Child Theme Setup Guide Template
+ *
+ * @var \Panth\Core\Block\Adminhtml\System\Config\ChildThemeGuide $block
+ */
+?>
+<style>
+    .panth-guide { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; color: #333; line-height: 1.6; }
+    .panth-guide h3 { color: #1a73e8; font-size: 16px; margin: 24px 0 8px; padding-bottom: 6px; border-bottom: 2px solid #e8eaed; }
+    .panth-guide h4 { color: #333; font-size: 14px; margin: 16px 0 6px; }
+    .panth-guide p { margin: 6px 0; font-size: 13px; }
+    .panth-guide pre { background: #1e1e1e; color: #d4d4d4; padding: 12px 16px; border-radius: 6px; overflow-x: auto; font-size: 12px; line-height: 1.5; margin: 8px 0 16px; }
+    .panth-guide code { background: #f1f3f4; color: #c7254e; padding: 2px 6px; border-radius: 3px; font-size: 12px; }
+    .panth-guide pre code { background: none; color: inherit; padding: 0; }
+    .panth-guide .warn-box { background: #fff3cd; border-left: 4px solid #ffc107; padding: 10px 14px; margin: 10px 0; border-radius: 0 4px 4px 0; font-size: 13px; }
+    .panth-guide .info-box { background: #d1ecf1; border-left: 4px solid #17a2b8; padding: 10px 14px; margin: 10px 0; border-radius: 0 4px 4px 0; font-size: 13px; }
+    .panth-guide .danger-box { background: #f8d7da; border-left: 4px solid #dc3545; padding: 10px 14px; margin: 10px 0; border-radius: 0 4px 4px 0; font-size: 13px; }
+    .panth-guide .step-num { display: inline-block; background: #1a73e8; color: #fff; width: 24px; height: 24px; border-radius: 50%; text-align: center; line-height: 24px; font-size: 13px; font-weight: bold; margin-right: 6px; }
+    .panth-guide ul { margin: 6px 0; padding-left: 20px; font-size: 13px; }
+    .panth-guide ul li { margin: 3px 0; }
+    .panth-guide .section { margin-bottom: 20px; }
+</style>
+
+<div class="panth-guide">
+
+<h3><span class="step-num">1</span> Required Theme Files</h3>
+<div class="section">
+    <p>Create your child theme directory at: <code>app/design/frontend/{Vendor}/{ThemeName}/</code></p>
+
+    <h4>a) registration.php</h4>
+<pre><code>&lt;?php
+use Magento\Framework\Component\ComponentRegistrar;
+
+ComponentRegistrar::register(
+    ComponentRegistrar::THEME,
+    'frontend/{Vendor}/{ThemeName}',
+    __DIR__
+);</code></pre>
+
+    <h4>b) theme.xml</h4>
+    <div class="danger-box"><strong>CRITICAL:</strong> Must declare <code>Panth/Infotech</code> as parent.</div>
+<pre><code>&lt;?xml version="1.0"?&gt;
+&lt;theme xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+       xsi:noNamespaceSchemaLocation="urn:magento:framework:Config/etc/theme.xsd"&gt;
+    &lt;title&gt;{Theme Display Name}&lt;/title&gt;
+    &lt;parent&gt;Panth/Infotech&lt;/parent&gt;
+    &lt;media&gt;
+        &lt;preview_image&gt;media/preview.jpg&lt;/preview_image&gt;
+    &lt;/media&gt;
+&lt;/theme&gt;</code></pre>
+
+    <h4>c) media/preview.jpg</h4>
+    <p>Must exist or <code>setup:upgrade</code> will warn. Copy from parent theme or create a placeholder.</p>
+
+    <h4>d) etc/view.xml</h4>
+    <p>Copy from <code>Panth/Infotech/etc/view.xml</code>. Contains image dimensions, JS bundle config, and RequireJS exclusions needed for Hyva.</p>
+</div>
+
+<h3><span class="step-num">2</span> Tailwind CSS Setup</h3>
+<div class="section">
+    <div class="danger-box"><strong>CRITICAL:</strong> The child theme needs its own complete Tailwind build setup.</div>
+
+    <h4>Files to copy from <code>Panth/Infotech/web/tailwind/</code>:</h4>
+    <ul>
+        <li><code>package.json</code> (update the <code>"name"</code> field to match child theme)</li>
+        <li><code>hyva.config.json</code></li>
+        <li><code>theme-config.json</code></li>
+        <li><code>tailwind-source.css</code> (must be modified &mdash; see Step 3)</li>
+        <li><code>generate-theme-css.js</code></li>
+        <li><code>browser-sync.config.js</code></li>
+        <li><code>post-build-deploy.sh</code> (change shebang to <code>#!/bin/sh</code> for Alpine Docker)</li>
+        <li><code>base/</code> directory (entire folder)</li>
+        <li><code>components/</code> directory (entire folder)</li>
+        <li><code>theme/</code> directory (entire folder)</li>
+        <li><code>utilities/</code> directory (entire folder)</li>
+    </ul>
+
+    <h4>Files that get auto-generated (do NOT copy):</h4>
+    <ul>
+        <li><code>node_modules/</code> &mdash; created by <code>npm install</code></li>
+        <li><code>generated/backend-config.css</code> &mdash; created by <code>npm run generate</code></li>
+        <li><code>generated/hyva-source.css</code> &mdash; created by <code>npx hyva-sources</code></li>
+        <li><code>generated/hyva-tokens.css</code> &mdash; created by <code>npx hyva-tokens</code></li>
+    </ul>
+</div>
+
+<h3><span class="step-num">3</span> Tailwind Source Scanning</h3>
+<div class="section">
+    <div class="danger-box"><strong>ROOT CAUSE OF MOST CHILD THEME ISSUES.</strong> The <code>tailwind-source.css</code> uses <code>@source</code> directives to tell Tailwind which files to scan for CSS class usage. By default, it only scans the child theme's own templates. Since the child theme has no template overrides initially, Tailwind tree-shakes ALL CSS classes used in the parent theme's templates, resulting in broken layout.</div>
+
+    <h4>FIX: Add <code>@source</code> lines for the parent theme:</h4>
+<pre><code>@import "@hyva-themes/hyva-modules/css";
+@import "tailwindcss" source(none);
+
+/* Scan child theme templates */
+@source "../../**/*.phtml";
+@source "../../**/*.xml";
+
+/* Scan parent theme (Panth/Infotech) templates - REQUIRED */
+@source "../../../../Panth/Infotech/**/*.phtml";
+@source "../../../../Panth/Infotech/**/*.xml";
+
+/* Custom styles */
+@import "./base";
+@import "./components";
+@import "./theme";
+@import "./utilities";
+
+/* Import generated styles */
+@import "./generated/hyva-source.css";
+@import "./generated/hyva-tokens.css";
+@import "./generated/backend-config.css";</code></pre>
+
+    <div class="info-box"><strong>Verification:</strong> After <code>npm run build</code>, compare CSS file sizes. The child theme's <code>web/css/styles.css</code> should be equal to or larger than the parent's. If it's significantly smaller, the <code>@source</code> for the parent is missing.</div>
+</div>
+
+<h3><span class="step-num">4</span> Theme Parent Chain in Database</h3>
+<div class="section">
+    <p>After <code>setup:upgrade</code>, verify the theme parent chain:</p>
+<pre><code>SELECT theme_id, theme_path, parent_id FROM theme;</code></pre>
+    <p>The chain must be: <code>{Child} &rarr; Panth/Infotech &rarr; Hyva/default</code></p>
+
+    <div class="warn-box"><strong>Known issue:</strong> Sometimes Panth/Infotech registers with <code>parent_id = NULL</code> instead of pointing to Hyva/default. If this happens, Hyva layout handles won't be inherited and the CSS link from <code>default_head_blocks.xml</code> won't load.</div>
+
+<pre><code>-- Find theme IDs
+SELECT theme_id, theme_path, parent_id FROM theme;
+
+-- Fix parent chain (adjust IDs as needed)
+UPDATE theme SET parent_id = {hyva_default_id} WHERE theme_path = 'Panth/Infotech';
+UPDATE theme SET parent_id = {panth_infotech_id} WHERE theme_path = '{Vendor}/{ThemeName}';</code></pre>
+</div>
+
+<h3><span class="step-num">5</span> Hyva Theme Detection</h3>
+<div class="section">
+    <p>All Panth modules use <code>Panth\Core\Helper\Theme::isHyva()</code> for theme detection. This checks if the <code>Hyva_Theme</code> module is enabled (not the theme path string), so it correctly supports child themes with any name.</p>
+
+    <div class="danger-box"><strong>NEVER</strong> check theme path for "hyva" or "Hyva" string to determine if Hyva is active. Child themes can have any name. Always use: <code>$this->themeHelper->isHyva();</code></div>
+</div>
+
+<h3><span class="step-num">6</span> NPM Build Commands</h3>
+<div class="section">
+    <p>Since Docker PHP containers typically don't have Node.js, use a Docker node container:</p>
+<pre><code># Install dependencies
+docker run --rm \
+  -v /path/to/src:/var/www/html \
+  -w /var/www/html/app/design/frontend/{Vendor}/{ThemeName}/web/tailwind \
+  node:20-alpine npm install
+
+# Build CSS
+docker run --rm \
+  -v /path/to/src:/var/www/html \
+  -w /var/www/html/app/design/frontend/{Vendor}/{ThemeName}/web/tailwind \
+  node:20-alpine npm run build</code></pre>
+
+    <div class="info-box">The <code>post-build-deploy.sh</code> script uses <code>#!/bin/bash</code> by default but Alpine Docker images only have <code>sh</code>. Change the shebang to <code>#!/bin/sh</code> or the postbuild step will fail.</div>
+</div>
+
+<h3><span class="step-num">7</span> Magento Commands After Theme Creation</h3>
+<div class="section">
+    <p>Run in this exact order:</p>
+    <ol style="font-size: 13px;">
+        <li><code>php bin/magento setup:upgrade</code> &mdash; registers the new theme</li>
+        <li><code>php bin/magento setup:di:compile</code> &mdash; regenerates DI configuration</li>
+        <li><code>npm run build</code> &mdash; builds Tailwind CSS (via Docker node container)</li>
+        <li><code>php bin/magento setup:static-content:deploy -f</code> &mdash; deploys static files including the built CSS</li>
+        <li><code>php bin/magento cache:flush</code> &mdash; clears all caches</li>
+    </ol>
+</div>
+
+<h3><span class="step-num">8</span> Setting the Active Theme</h3>
+<div class="section">
+    <p>Via admin: <strong>Content &gt; Design &gt; Configuration &gt; Edit Store View &gt; Applied Theme</strong></p>
+    <p>Or via database:</p>
+<pre><code>-- Set for default scope
+INSERT INTO core_config_data (scope, scope_id, path, value)
+VALUES ('default', 0, 'design/theme/theme_id', '{child_theme_id}')
+ON DUPLICATE KEY UPDATE value = '{child_theme_id}';
+
+-- Set for specific store (if needed)
+UPDATE core_config_data SET value = '{child_theme_id}'
+WHERE path = 'design/theme/theme_id' AND scope = 'stores' AND scope_id = {store_id};</code></pre>
+</div>
+
+<h3><span class="step-num">9</span> CSS Merge/Minify Settings</h3>
+<div class="section">
+    <div class="warn-box">Disable CSS merging for Hyva themes. Hyva produces a single optimized <code>styles.css</code> via Tailwind. Magento's CSS merge can interfere by creating stale merged files or missing the Hyva CSS entirely.</div>
+<pre><code>UPDATE core_config_data SET value = '0' WHERE path = 'dev/css/merge_css_files';
+UPDATE core_config_data SET value = '0' WHERE path = 'dev/css/minify_files';</code></pre>
+</div>
+
+<h3><span class="step-num">10</span> Do NOT Modify the Parent Theme</h3>
+<div class="section">
+    <div class="danger-box">The <code>Panth/Infotech</code> theme and all <code>Panth/*</code> modules are synced from the hyva-theme project via <code>sync-panth-modules.sh</code>. Never modify files in <code>Panth/Infotech/</code> or <code>app/code/Panth/</code> directly &mdash; changes will be overwritten on next sync.</div>
+    <p>All project-specific customizations go in the child theme:</p>
+    <ul>
+        <li>Template overrides: <code>{Vendor}/{ThemeName}/Magento_Catalog/templates/...</code></li>
+        <li>Layout overrides: <code>{Vendor}/{ThemeName}/Magento_Theme/layout/...</code></li>
+        <li>CSS customizations: <code>{Vendor}/{ThemeName}/web/tailwind/theme/</code> or <code>components/</code></li>
+        <li>Design tokens: <code>{Vendor}/{ThemeName}/web/tailwind/theme-config.json</code></li>
+    </ul>
+</div>
+
+</div>

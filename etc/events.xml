@@ -1,0 +1,10 @@
+<?xml version="1.0"?>
+<!--
+/**
+ * Panth Core Events Configuration
+ */
+-->
+<config xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:noNamespaceSchemaLocation="urn:magento:framework:Event/etc/events.xsd">
+
+</config>

@@ -1,0 +1,28 @@
+<?xml version="1.0"?>
+<!--
+/**
+ * Panth Core - ACL Configuration
+ */
+-->
+<config xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:noNamespaceSchemaLocation="urn:magento:framework:Acl/etc/acl.xsd">
+    <acl>
+        <resources>
+            <resource id="Magento_Backend::admin">
+                <!-- Main Panth Extensions Menu Parent -->
+                <resource id="Panth_Core::panth_extensions" title="Panth Infotech" sortOrder="100">
+                    <resource id="Panth_Core::config" title="Core Configuration" sortOrder="10"/>
+                </resource>
+
+                <!-- System Configuration Access -->
+                <resource id="Magento_Backend::stores">
+                    <resource id="Magento_Backend::stores_settings">
+                        <resource id="Magento_Config::config">
+                            <resource id="Panth_Core::core_config" title="Panth Core Configuration" sortOrder="100"/>
+                        </resource>
+                    </resource>
+                </resource>
+            </resource>
+        </resources>
+    </acl>
+</config>

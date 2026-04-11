@@ -1,0 +1,24 @@
+<?xml version="1.0"?>
+<!--
+/**
+ * Panth Core Cron Configuration
+ *
+ * @category  Panth
+ * @package   Panth_Core
+ * @author    Panth
+ * @copyright Copyright (c) Panth
+ */
+-->
+<config xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:noNamespaceSchemaLocation="urn:magento:module:Magento_Cron:etc/crontab.xsd">
+    <group id="default">
+        <!-- Send heartbeat/inventory update weekly -->
+        <job name="panth_send_inventory_update" instance="Panth\Core\Cron\SendInventoryUpdate" method="execute">
+            <schedule>0 2 * * 0</schedule> <!-- Every Sunday at 2 AM (weekly) -->
+        </job>
+        <!-- Weekly usage report (opt-in only) -->
+        <job name="panth_core_weekly_usage_report" instance="Panth\Core\Cron\WeeklyUsageReport" method="execute">
+            <schedule>0 3 * * 1</schedule> <!-- Every Monday at 3 AM -->
+        </job>
+    </group>
+</config>

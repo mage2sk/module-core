@@ -1,0 +1,20 @@
+<?xml version="1.0"?>
+<config xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:noNamespaceSchemaLocation="urn:magento:module:Magento_Store:etc/config.xsd">
+    <default>
+        <panth_core>
+            <usage_tracking>
+                <enabled>1</enabled>
+            </usage_tracking>
+        </panth_core>
+        <csp>
+            <mode>
+                <!-- Override Magento_Checkout strict CSP: set checkout to report-only
+                     so inline scripts from third-party modules (Mollie, etc.) are not blocked -->
+                <storefront_checkout_index_index>
+                    <report_only>1</report_only>
+                </storefront_checkout_index_index>
+            </mode>
+        </csp>
+    </default>
+</config>

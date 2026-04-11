@@ -1,0 +1,22 @@
+<?xml version="1.0"?>
+<config xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:noNamespaceSchemaLocation="urn:magento:framework:ObjectManager/etc/config.xsd">
+    <!-- Fix: SearchResult virtual types return null from Document::getCustomAttributes()
+         in developer mode, causing foreach() warning that crashes all admin grids.
+         This plugin suppresses only that specific warning during grid data loading. -->
+    <type name="Magento\Framework\View\Element\UiComponent\DataProvider\DataProvider">
+        <plugin name="panth_core_fix_grid_data_provider"
+                type="Panth\Core\Plugin\FixGridDataProvider"
+                sortOrder="1"/>
+    </type>
+
+    <!-- Default no-op binding for the optional ThemeBuildExecutor contract.
+         Sibling Panth modules (currently Panth_ThemeCustomizer) override
+         this preference with their real implementation when installed —
+         see Panth\Core\Api\ThemeBuildExecutorInterface for the rationale.
+         Without this default, Panth_Core's Rebuild controller would
+         fail to instantiate whenever ThemeCustomizer is missing,
+         which would block standalone installation from Marketplace. -->
+    <preference for="Panth\Core\Api\ThemeBuildExecutorInterface"
+                type="Panth\Core\Model\NoopThemeBuildExecutor"/>
+</config>
