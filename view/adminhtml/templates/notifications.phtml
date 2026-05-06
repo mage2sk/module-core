@@ -2,20 +2,15 @@
 /**
  * Copyright © Panth Infotech. All rights reserved.
  *
- * Renders Panth admin notifications in two display modes:
- *   - top-of-page banner for messages flagged pin_to_top
- *   - login popup modal for messages flagged display_as_popup
+ * Renders Panth admin notifications in two display modes that mimic
+ * Magento's native backend chrome:
+ *   - top-of-page notice bar (matches `.message-system` styling)
+ *   - centred login popup modal (matches `.modal-popup` styling)
  *
- * The same modal HTML is also reused when an admin clicks "Read more"
- * on the banner — a single source of truth for the rich body, CTAs,
- * and image. Both modes share self-contained CSS + JS (no jQuery, no
- * RequireJS dependency) so they work on any Magento backend theme.
- *
- * Brand palette matches kishansavaliya.com: deep orange primary
- * (#F26B22) with a slightly warmer hover, paired with a charcoal
- * secondary on a near-white background. Severity colours stay distinct
- * but muted toward the same warm family so red/yellow/blue notices
- * don't clash with the orange CTAs.
+ * Inherits Magento admin's font stack (Open Sans → Helvetica → Arial)
+ * via cascade — no font-family override here. Buttons use the
+ * `.action-primary` / `.action-secondary` palette so they sit visually
+ * alongside Magento's own admin buttons.
  *
  * @var \Panth\Core\Block\Adminhtml\Notifications $block
  * @var \Magento\Framework\Escaper $escaper
@@ -32,8 +27,10 @@ $markShownUrl = $block->getMarkShownUrl();
 $dismissUrl   = $block->getDismissUrl();
 $formKey      = $block->getFormKey();
 
-// Build a unique set of messages we need a modal for: every popup message
-// and every banner message (because the banner's "Read more" opens it).
+// Build the unique set of messages we need a modal for: every popup
+// AND every banner (because the banner's "Read more" reuses the same
+// modal). Dedupe on message_id so a message flagged for both modes
+// only renders one modal.
 $modalMessages = [];
 $seen = [];
 foreach (array_merge($popups, $banners) as $m) {
@@ -45,51 +42,170 @@ foreach (array_merge($popups, $banners) as $m) {
     $modalMessages[] = $m;
 }
 
-// Auto-open IDs are messages with display_as_popup=1 that this admin
-// hasn't dismissed and hasn't seen MAX_POPUP_SHOWS times yet — already
-// pre-filtered server-side by AdminNotificationProvider::getPopupMessages.
 $autoOpenId = !empty($popups) ? (string) $popups[0]->getData('message_id') : '';
 ?>
 <style>
-.panth-notif-bar{position:relative;display:flex;align-items:center;gap:12px;padding:10px 16px;margin:0;font:14px/1.4 -apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;border-bottom:1px solid rgba(0,0,0,.08);}
-.panth-notif-bar.sev-critical{background:#fde7e7;color:#9b1c1c;}
-.panth-notif-bar.sev-major{background:#fff1e0;color:#9a3412;}
-.panth-notif-bar.sev-minor{background:#fff8db;color:#854d0e;}
-.panth-notif-bar.sev-notice{background:#fff4ea;color:#7c2d12;}
-.panth-notif-bar__title{font-weight:600;}
-.panth-notif-bar__desc{flex:1;}
-.panth-notif-bar__readmore{display:inline-block;padding:4px 10px;border-radius:4px;background:transparent;border:1px solid rgba(242,107,34,.45);color:#b8430f;text-decoration:none;font-weight:600;font-size:13px;cursor:pointer;}
-.panth-notif-bar__readmore:hover{background:rgba(242,107,34,.08);color:#8a3209;text-decoration:none;}
-.panth-notif-bar__cta{display:inline-block;padding:4px 12px;border-radius:4px;background:linear-gradient(135deg,#F26B22 0%,#F08423 100%);color:#fff;text-decoration:none;font-weight:600;font-size:13px;box-shadow:0 1px 2px rgba(242,107,34,.3);}
-.panth-notif-bar__cta:hover{background:linear-gradient(135deg,#D8581E 0%,#D9701B 100%);color:#fff;text-decoration:none;}
-.panth-notif-bar__close{background:transparent;border:0;font-size:18px;line-height:1;cursor:pointer;color:inherit;opacity:.7;padding:0 4px;}
-.panth-notif-bar__close:hover{opacity:1;}
-.panth-notif-modal-overlay{position:fixed;inset:0;background:rgba(17,24,39,.55);display:none;align-items:center;justify-content:center;z-index:9999;font:14px/1.5 -apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;}
-.panth-notif-modal-overlay.active{display:flex;}
-.panth-notif-modal{background:#fff;border-radius:8px;max-width:560px;width:90%;max-height:85vh;overflow:auto;box-shadow:0 20px 60px rgba(0,0,0,.3);}
-.panth-notif-modal__header{padding:20px 24px 12px;border-bottom:1px solid #f0f0f0;display:flex;align-items:center;gap:12px;}
-.panth-notif-modal__sev{display:inline-block;width:8px;height:8px;border-radius:50%;flex:none;}
-.panth-notif-modal__sev.sev-critical{background:#dc2626;}
-.panth-notif-modal__sev.sev-major{background:#ea580c;}
-.panth-notif-modal__sev.sev-minor{background:#eab308;}
-.panth-notif-modal__sev.sev-notice{background:#F26B22;}
-.panth-notif-modal__title{font-size:18px;font-weight:600;flex:1;margin:0;color:#111827;}
-.panth-notif-modal__close{background:transparent;border:0;font-size:22px;line-height:1;cursor:pointer;color:#6b7280;padding:0 4px;}
-.panth-notif-modal__close:hover{color:#111;}
-.panth-notif-modal__image{display:block;max-width:100%;height:auto;margin:0;}
-.panth-notif-modal__body{padding:20px 24px;color:#374151;}
-.panth-notif-modal__body p{margin:0 0 12px;}
-.panth-notif-modal__body a{color:#F26B22;}
-.panth-notif-modal__body a:hover{color:#D8581E;}
-.panth-notif-modal__footer{padding:12px 24px 20px;display:flex;gap:10px;align-items:center;border-top:1px solid #f0f0f0;}
-.panth-notif-modal__footer-spacer{flex:1;}
-.panth-notif-modal__btn{display:inline-block;padding:8px 16px;border-radius:4px;font-weight:600;font-size:14px;cursor:pointer;border:1px solid transparent;text-decoration:none;line-height:1.4;}
-.panth-notif-modal__btn--primary{background:linear-gradient(135deg,#F26B22 0%,#F08423 100%);color:#fff;box-shadow:0 1px 2px rgba(242,107,34,.3);}
-.panth-notif-modal__btn--primary:hover{background:linear-gradient(135deg,#D8581E 0%,#D9701B 100%);color:#fff;text-decoration:none;}
-.panth-notif-modal__btn--secondary{background:#fff;color:#374151;border-color:#d1d5db;}
-.panth-notif-modal__btn--secondary:hover{background:#f9fafb;color:#111827;text-decoration:none;}
-.panth-notif-modal__btn--ghost{background:transparent;color:#6b7280;border-color:transparent;padding-left:0;padding-right:8px;}
-.panth-notif-modal__btn--ghost:hover{color:#111;background:transparent;text-decoration:underline;}
+/* ---------- Top notice bar (matches Magento .message-system) ---------- */
+.panth-notice{
+    position:relative;
+    display:flex;align-items:center;gap:12px;
+    padding:12px 30px 12px 38px;
+    margin:0;
+    border-radius:0;
+    font-size:13px;line-height:1.4;
+    color:#514943;
+    background:#fdf0d5;
+    border-bottom:1px solid #e8d99e;
+}
+.panth-notice::before{
+    content:"";
+    position:absolute;left:14px;top:50%;
+    width:14px;height:14px;margin-top:-7px;
+    border-radius:50%;
+    background:#eb5202;
+    box-shadow:inset 0 0 0 2px #fdf0d5;
+}
+.panth-notice.sev-critical{background:#fae5e5;border-bottom-color:#e0a8a8;color:#8a1a1a;}
+.panth-notice.sev-critical::before{background:#dc2626;}
+.panth-notice.sev-major{background:#fdf0d5;border-bottom-color:#e8d99e;}
+.panth-notice.sev-major::before{background:#eb5202;}
+.panth-notice.sev-minor{background:#fff8db;border-bottom-color:#e8d99e;}
+.panth-notice.sev-minor::before{background:#d6a300;}
+.panth-notice.sev-notice{background:#e5f0fa;border-bottom-color:#a8c2d8;color:#1a3d6b;}
+.panth-notice.sev-notice::before{background:#1979c3;}
+
+.panth-notice__title{font-weight:600;}
+.panth-notice__desc{flex:1;color:inherit;}
+.panth-notice__readmore,
+.panth-notice__cta{
+    display:inline-block;
+    padding:5px 14px;
+    border-radius:3px;
+    font-size:12px;font-weight:600;
+    text-decoration:none;
+    cursor:pointer;
+    line-height:1.4;
+}
+.panth-notice__readmore{
+    background:#fff;
+    color:#514943;
+    border:1px solid #ada89e;
+}
+.panth-notice__readmore:hover{
+    background:#f8f7f5;color:#303030;text-decoration:none;
+}
+.panth-notice__cta{
+    background:#eb5202;
+    color:#fff;
+    border:1px solid #eb5202;
+}
+.panth-notice__cta:hover{
+    background:#ba5418;border-color:#ba5418;color:#fff;text-decoration:none;
+}
+.panth-notice__close{
+    background:transparent;border:0;
+    font-size:18px;line-height:1;
+    cursor:pointer;color:inherit;opacity:.55;
+    padding:0 4px;margin-left:4px;
+}
+.panth-notice__close:hover{opacity:1;}
+
+/* ---------- Modal popup (matches Magento .modal-popup) ---------- */
+.panth-modal-overlay{
+    position:fixed;inset:0;
+    background:rgba(48,48,48,.55);
+    display:none;align-items:flex-start;justify-content:center;
+    z-index:9999;
+    padding:5rem 1rem 1rem;
+    overflow:auto;
+}
+.panth-modal-overlay.active{display:flex;}
+.panth-modal{
+    background:#fff;
+    box-shadow:0 0 12px 2px rgba(0,0,0,.35);
+    border-radius:0;
+    width:100%;max-width:750px;
+    margin:0 auto;
+    max-height:calc(100vh - 6rem);
+    overflow:auto;
+}
+.panth-modal__header{
+    position:relative;
+    padding:30px 30px 0;
+}
+.panth-modal__title{
+    margin:0;
+    padding:0 30px 25px 0;
+    border-bottom:1px solid #e2e2e2;
+    color:#303030;
+    font-size:26px;font-weight:300;line-height:1.2;
+}
+.panth-modal__close{
+    position:absolute;
+    top:18px;right:18px;
+    width:30px;height:30px;
+    background:transparent;border:0;
+    color:#8f857d;
+    font-size:24px;line-height:1;
+    cursor:pointer;
+    padding:0;
+}
+.panth-modal__close:hover{color:#303030;}
+.panth-modal__image-wrap{padding:20px 30px 0;}
+.panth-modal__image{display:block;max-width:100%;height:auto;margin:0;}
+.panth-modal__body{
+    padding:20px 30px;
+    color:#303030;
+    font-size:14px;line-height:1.5;
+}
+.panth-modal__body h2{
+    font-size:18px;font-weight:600;
+    color:#303030;margin:18px 0 8px;
+}
+.panth-modal__body h2:first-child{margin-top:0;}
+.panth-modal__body p{margin:0 0 12px;}
+.panth-modal__body ul{margin:0 0 12px;padding-left:20px;}
+.panth-modal__body li{margin:0 0 4px;}
+.panth-modal__body a{color:#1979c3;text-decoration:none;}
+.panth-modal__body a:hover{text-decoration:underline;}
+.panth-modal__footer{
+    border-top:1px solid #e2e2e2;
+    padding:20px 30px;
+    display:flex;align-items:center;gap:10px;
+    background:#fff;
+}
+.panth-modal__footer-spacer{flex:1;}
+
+.panth-action{
+    display:inline-block;
+    padding:7px 15px;
+    font-size:14px;font-weight:600;
+    line-height:1.6;
+    border-radius:3px;
+    cursor:pointer;
+    text-decoration:none;
+    border:1px solid transparent;
+}
+.panth-action--primary{
+    background:#eb5202;color:#fff;border-color:#eb5202;
+}
+.panth-action--primary:hover{
+    background:#ba5418;border-color:#ba5418;color:#fff;text-decoration:none;
+}
+.panth-action--secondary{
+    background:#fff;color:#514943;border-color:#ada89e;
+}
+.panth-action--secondary:hover{
+    background:#f8f7f5;border-color:#878079;color:#303030;text-decoration:none;
+}
+.panth-action--ghost{
+    background:transparent;color:#1979c3;border:0;
+    padding-left:0;padding-right:8px;
+    font-weight:400;
+}
+.panth-action--ghost:hover{
+    color:#0d5da3;background:transparent;text-decoration:underline;
+}
 </style>
 
 <?php if (!empty($banners)): ?>
@@ -100,20 +216,20 @@ $autoOpenId = !empty($popups) ? (string) $popups[0]->getData('message_id') : '';
     $title     = (string) $banner->getData('title');
     $desc      = (string) $banner->getData('description');
     $proxyUrl  = (string) $banner->getData('proxy_url');
-    $ctaLabel  = trim((string) $banner->getData('cta_label')) ?: __('Read more');
+    $ctaLabel  = trim((string) $banner->getData('cta_label')) ?: __('View');
     ?>
-    <div class="panth-notif-bar sev-<?= $escaper->escapeHtmlAttr($severity) ?>"
+    <div class="panth-notice sev-<?= $escaper->escapeHtmlAttr($severity) ?>"
          data-panth-banner data-message-id="<?= $escaper->escapeHtmlAttr($messageId) ?>">
-        <span class="panth-notif-bar__title"><?= $escaper->escapeHtml($title) ?></span>
-        <span class="panth-notif-bar__desc"><?= $escaper->escapeHtml($desc) ?></span>
-        <button type="button" class="panth-notif-bar__readmore"
+        <span class="panth-notice__title"><?= $escaper->escapeHtml($title) ?></span>
+        <span class="panth-notice__desc"><?= $escaper->escapeHtml($desc) ?></span>
+        <button type="button" class="panth-notice__readmore"
                 data-panth-readmore="<?= $escaper->escapeHtmlAttr($messageId) ?>"><?= $escaper->escapeHtml(__('Read more')) ?></button>
         <?php if ($proxyUrl): ?>
-            <a class="panth-notif-bar__cta"
+            <a class="panth-notice__cta"
                href="<?= $escaper->escapeUrl($proxyUrl) ?><?= str_contains($proxyUrl, '?') ? '&' : '?' ?>src=top_bar"
                target="_blank" rel="noopener noreferrer"><?= $escaper->escapeHtml($ctaLabel) ?></a>
         <?php endif; ?>
-        <button type="button" class="panth-notif-bar__close" data-panth-banner-dismiss aria-label="<?= $escaper->escapeHtmlAttr(__('Dismiss')) ?>">×</button>
+        <button type="button" class="panth-notice__close" data-panth-banner-dismiss aria-label="<?= $escaper->escapeHtmlAttr(__('Dismiss')) ?>">×</button>
     </div>
 <?php endforeach; ?>
 <?php endif; ?>
@@ -121,51 +237,52 @@ $autoOpenId = !empty($popups) ? (string) $popups[0]->getData('message_id') : '';
 <?php foreach ($modalMessages as $modal): ?>
 <?php
 $mid             = (string) $modal->getData('message_id');
-$mSev            = (string) $modal->getData('severity');
 $mTitle          = (string) $modal->getData('title');
 $mDesc           = (string) $modal->getData('description');
 $mBodyHtml       = (string) $modal->getData('body_html');
 $mImage          = (string) $modal->getData('image_url');
 $mProxy          = (string) $modal->getData('proxy_url');
-$mCta            = trim((string) $modal->getData('cta_label')) ?: __('Read more');
+$mCta            = trim((string) $modal->getData('cta_label')) ?: __('View');
 $mSecondaryUrl   = (string) $modal->getData('secondary_cta_url');
 $mSecondaryLabel = (string) $modal->getData('secondary_cta_label');
 ?>
-<div class="panth-notif-modal-overlay" data-panth-popup data-message-id="<?= $escaper->escapeHtmlAttr($mid) ?>">
-    <div class="panth-notif-modal" role="dialog" aria-modal="true">
-        <div class="panth-notif-modal__header">
-            <span class="panth-notif-modal__sev sev-<?= $escaper->escapeHtmlAttr($mSev) ?>" aria-hidden="true"></span>
-            <h2 class="panth-notif-modal__title"><?= $escaper->escapeHtml($mTitle) ?></h2>
-            <button type="button" class="panth-notif-modal__close" data-panth-close aria-label="<?= $escaper->escapeHtmlAttr(__('Close')) ?>">×</button>
+<div class="panth-modal-overlay" data-panth-popup data-message-id="<?= $escaper->escapeHtmlAttr($mid) ?>">
+    <div class="panth-modal" role="dialog" aria-modal="true">
+        <div class="panth-modal__header">
+            <button type="button" class="panth-modal__close" data-panth-close aria-label="<?= $escaper->escapeHtmlAttr(__('Close')) ?>">×</button>
+            <h1 class="panth-modal__title"><?= $escaper->escapeHtml($mTitle) ?></h1>
         </div>
         <?php if ($mImage): ?>
-            <img class="panth-notif-modal__image" src="<?= $escaper->escapeUrl($mImage) ?>" alt=""/>
+            <div class="panth-modal__image-wrap"><img class="panth-modal__image" src="<?= $escaper->escapeUrl($mImage) ?>" alt=""/></div>
         <?php endif; ?>
-        <div class="panth-notif-modal__body">
+        <div class="panth-modal__body">
             <?php if ($mBodyHtml !== ''): ?>
                 <?= /* @noEscape */ $mBodyHtml ?>
             <?php else: ?>
                 <p><?= $escaper->escapeHtml($mDesc) ?></p>
             <?php endif; ?>
         </div>
-        <div class="panth-notif-modal__footer">
-            <button type="button" class="panth-notif-modal__btn panth-notif-modal__btn--ghost" data-panth-mark-read>
+        <div class="panth-modal__footer">
+            <button type="button" class="panth-action panth-action--ghost" data-panth-mark-read>
                 <?= $escaper->escapeHtml(__('Mark as read')) ?>
             </button>
-            <span class="panth-notif-modal__footer-spacer"></span>
+            <span class="panth-modal__footer-spacer"></span>
+            <button type="button" class="panth-action panth-action--secondary" data-panth-close>
+                <?= $escaper->escapeHtml(__('Close')) ?>
+            </button>
             <?php if ($mSecondaryUrl !== '' && $mSecondaryLabel !== ''): ?>
-                <a class="panth-notif-modal__btn panth-notif-modal__btn--secondary"
+                <a class="panth-action panth-action--secondary"
                    href="<?= $escaper->escapeUrl($mSecondaryUrl) ?>"
                    target="_blank" rel="noopener noreferrer"
                    data-panth-secondary><?= $escaper->escapeHtml($mSecondaryLabel) ?></a>
             <?php endif; ?>
             <?php if ($mProxy): ?>
-                <a class="panth-notif-modal__btn panth-notif-modal__btn--primary"
+                <a class="panth-action panth-action--primary"
                    href="<?= $escaper->escapeUrl($mProxy) ?><?= str_contains($mProxy, '?') ? '&' : '?' ?>src=popup"
                    target="_blank" rel="noopener noreferrer"
                    data-panth-cta><?= $escaper->escapeHtml($mCta) ?></a>
             <?php else: ?>
-                <button type="button" class="panth-notif-modal__btn panth-notif-modal__btn--primary" data-panth-close><?= $escaper->escapeHtml(__('Got it')) ?></button>
+                <button type="button" class="panth-action panth-action--primary" data-panth-close><?= $escaper->escapeHtml(__('Got it')) ?></button>
             <?php endif; ?>
         </div>
     </div>
@@ -185,7 +302,6 @@ $mSecondaryLabel = (string) $modal->getData('secondary_cta_label');
             var data = new FormData();
             data.append('form_key', formKey);
             data.append('message_id', messageId);
-            // sendBeacon survives navigation away (e.g. CTA click in same tab)
             if (navigator.sendBeacon) {
                 navigator.sendBeacon(url, data);
                 return;
@@ -198,14 +314,13 @@ $mSecondaryLabel = (string) $modal->getData('secondary_cta_label');
         }
     }
 
-    function findPopupForMessage(messageId) {
-        return document.querySelector('[data-panth-popup][data-message-id="' + cssEscape(messageId) + '"]');
-    }
-
-    // CSS.escape isn't on every admin browser; tiny safe fallback.
     function cssEscape(value) {
         if (window.CSS && CSS.escape) return CSS.escape(value);
         return String(value).replace(/[^a-zA-Z0-9_-]/g, '\\$&');
+    }
+
+    function findPopupForMessage(messageId) {
+        return document.querySelector('[data-panth-popup][data-message-id="' + cssEscape(messageId) + '"]');
     }
 
     function openPopup(messageId, recordShown) {
@@ -223,49 +338,34 @@ $mSecondaryLabel = (string) $modal->getData('secondary_cta_label');
 
     function dismissMessage(messageId) {
         postState(dismissUrl, messageId);
-        // Remove the banner if present
         var banner = document.querySelector('[data-panth-banner][data-message-id="' + cssEscape(messageId) + '"]');
         if (banner) banner.style.display = 'none';
-        // Close + hide every modal for this message
         document.querySelectorAll('[data-panth-popup][data-message-id="' + cssEscape(messageId) + '"]').forEach(function(p){
             p.classList.remove('active');
         });
     }
 
-    // --- Banner controls ---
     document.querySelectorAll('[data-panth-banner]').forEach(function(banner){
         var messageId = banner.getAttribute('data-message-id');
-        // Banner X = dismiss
         var dismissBtn = banner.querySelector('[data-panth-banner-dismiss]');
         if (dismissBtn) {
-            dismissBtn.addEventListener('click', function(){
-                dismissMessage(messageId);
-            });
+            dismissBtn.addEventListener('click', function(){ dismissMessage(messageId); });
         }
-        // "Read more" opens the popup
         var readMore = banner.querySelector('[data-panth-readmore]');
         if (readMore) {
-            readMore.addEventListener('click', function(){
-                openPopup(messageId, false);
-            });
+            readMore.addEventListener('click', function(){ openPopup(messageId, false); });
         }
     });
 
-    // --- Modal controls ---
     document.querySelectorAll('[data-panth-popup]').forEach(function(popup){
         var messageId = popup.getAttribute('data-message-id');
-        // Close button (× and outline-only "Close")
         popup.querySelectorAll('[data-panth-close]').forEach(function(btn){
             btn.addEventListener('click', function(){ closePopup(popup); });
         });
-        // Mark as read = permanent dismiss + close
         var markRead = popup.querySelector('[data-panth-mark-read]');
         if (markRead) {
-            markRead.addEventListener('click', function(){
-                dismissMessage(messageId);
-            });
+            markRead.addEventListener('click', function(){ dismissMessage(messageId); });
         }
-        // CTA / secondary opens in new tab AND counts as a dismiss
         var cta = popup.querySelector('[data-panth-cta]');
         if (cta) {
             cta.addEventListener('click', function(){
@@ -280,25 +380,18 @@ $mSecondaryLabel = (string) $modal->getData('secondary_cta_label');
                 closePopup(popup);
             });
         }
-        // Click outside the modal also closes (without permanent dismiss)
         popup.addEventListener('click', function(e){
-            if (e.target === popup) {
-                closePopup(popup);
-            }
+            if (e.target === popup) closePopup(popup);
         });
     });
 
-    // Auto-open on load for messages flagged display_as_popup
     if (autoOpenId) {
         openPopup(autoOpenId, true);
     }
 
-    // ESC closes any open modal
     document.addEventListener('keydown', function(e){
         if (e.key !== 'Escape') return;
-        document.querySelectorAll('[data-panth-popup].active').forEach(function(p){
-            closePopup(p);
-        });
+        document.querySelectorAll('[data-panth-popup].active').forEach(function(p){ closePopup(p); });
     });
 })();
 </script>
