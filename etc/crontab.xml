@@ -20,10 +20,13 @@
         <job name="panth_core_weekly_usage_report" instance="Panth\Core\Cron\WeeklyUsageReport" method="execute">
             <schedule>0 3 * * 1</schedule> <!-- Every Monday at 3 AM -->
         </job>
-        <!-- Daily notifications fetch — pulls Panth advisories/announcements
-             into Magento's admin inbox (the bell icon). Off-peak schedule. -->
+        <!-- Notifications fetch — pulls Panth advisories/announcements into
+             Magento's admin inbox (the bell icon). Runs every 15 minutes
+             so newly-published messages reach consumer sites quickly. The
+             publisher serves the feed with ETag + 600s Cache-Control, so
+             a no-op poll costs the publisher one cheap 304 response. -->
         <job name="panth_core_fetch_notifications" instance="Panth\Core\Cron\FetchNotifications" method="execute">
-            <schedule>15 4 * * *</schedule>
+            <schedule>*/15 * * * *</schedule>
         </job>
     </group>
 </config>
