@@ -43,11 +43,20 @@ class Notifications extends Template
     }
 
     /**
+     * Defensive wrappers — the underlying provider already swallows DB
+     * errors, but this block is rendered on every admin page so we
+     * double-belt-and-braces with another try/catch. A crash here
+     * would 500 the whole backend.
+     *
      * @return \Panth\Core\Model\AdminNotification[]
      */
     public function getPopupMessages(): array
     {
-        return $this->provider->getPopupMessages();
+        try {
+            return $this->provider->getPopupMessages();
+        } catch (\Throwable) {
+            return [];
+        }
     }
 
     /**
@@ -55,7 +64,11 @@ class Notifications extends Template
      */
     public function getBannerMessages(): array
     {
-        return $this->provider->getBannerMessages();
+        try {
+            return $this->provider->getBannerMessages();
+        } catch (\Throwable) {
+            return [];
+        }
     }
 
     public function getMarkShownUrl(): string
