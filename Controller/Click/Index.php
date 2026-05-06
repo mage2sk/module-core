@@ -42,10 +42,11 @@ class Index implements HttpGetActionInterface
     {
         $messageId = trim((string) $this->request->getParam('msg', ''));
         $destination = $this->decodeDestination((string) $this->request->getParam('to', ''));
+        $source = $this->normaliseSource((string) $this->request->getParam('src', ''));
 
         if ($messageId !== '' && $destination !== '') {
             try {
-                $this->clickReporter->report($messageId, $destination);
+                $this->clickReporter->report($messageId, $destination, $source);
             } catch (\Throwable $e) {
                 $this->logger->info('[panth_core] click controller report exception', [
                     'error' => $e->getMessage(),
@@ -84,5 +85,16 @@ class Index implements HttpGetActionInterface
         } catch (\Throwable) {
             return '/';
         }
+    }
+
+    /**
+     * Whitelist the click_source query param so a malicious link can't
+     * inject arbitrary text into our analytics column.
+     */
+    private function normaliseSource(string $raw): string
+    {
+        $allowed = ['bell_inbox', 'popup', 'top_bar', 'other'];
+        $raw = strtolower(trim($raw));
+        return in_array($raw, $allowed, true) ? $raw : 'bell_inbox';
     }
 }

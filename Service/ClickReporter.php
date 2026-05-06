@@ -6,8 +6,10 @@ declare(strict_types=1);
 
 namespace Panth\Core\Service;
 
+use Magento\Framework\App\ProductMetadataInterface;
 use Magento\Framework\App\RequestInterface;
 use Magento\Framework\HTTP\Client\Curl;
+use Magento\Framework\Module\ModuleListInterface;
 use Magento\Store\Model\StoreManagerInterface;
 use Psr\Log\LoggerInterface;
 
@@ -31,11 +33,16 @@ class ClickReporter
         private readonly Curl $http,
         private readonly StoreManagerInterface $storeManager,
         private readonly RequestInterface $request,
+        private readonly ProductMetadataInterface $productMetadata,
+        private readonly ModuleListInterface $moduleList,
         private readonly LoggerInterface $logger
     ) {
     }
 
-    public function report(string $messageId, string $destinationUrl): void
+    /**
+     * @param string $clickSource bell_inbox|popup|top_bar|other
+     */
+    public function report(string $messageId, string $destinationUrl, string $clickSource = 'bell_inbox'): void
     {
         if ($messageId === '' || $destinationUrl === '') {
             return;
@@ -45,17 +52,7 @@ class ClickReporter
         }
 
         try {
-            $payload = json_encode([
-                'message_id'  => $messageId,
-                'site_url'    => $this->getSiteUrl(),
-                'destination' => $destinationUrl,
-                'clicked_at'  => gmdate('Y-m-d\TH:i:s\Z'),
-                'user_agent'  => mb_substr(
-                    (string) ($this->request->getServer('HTTP_USER_AGENT', '') ?? ''),
-                    0,
-                    self::USER_AGENT_MAX_LENGTH
-                ),
-            ], JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
+            $payload = json_encode($this->buildPayload($messageId, $destinationUrl, $clickSource), JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
 
             $this->http->setOption(CURLOPT_TIMEOUT, self::TIMEOUT_SECONDS);
             $this->http->setOption(CURLOPT_CONNECTTIMEOUT, self::CONNECT_TIMEOUT_SECONDS);
@@ -85,6 +82,66 @@ class ClickReporter
             return rtrim((string) $this->storeManager->getStore()->getBaseUrl(), '/');
         } catch (\Throwable) {
             return '';
+        }
+    }
+
+    /**
+     * Assemble the click payload. Sends every field the publisher's
+     * ClickRecorder accepts so the analytics grid can slice clicks by
+     * source, Magento version, PHP version, etc. Empty fields are
+     * dropped so we don't pad the wire with `"foo":""` noise.
+     *
+     * @return array<string, string>
+     */
+    private function buildPayload(string $messageId, string $destinationUrl, string $clickSource): array
+    {
+        $payload = [
+            'message_id'         => $messageId,
+            'site_url'           => $this->getSiteUrl(),
+            'site_name'          => $this->getSiteName(),
+            'destination'        => $destinationUrl,
+            'referer_url'        => $this->getRefererUrl(),
+            'click_source'       => mb_substr($clickSource !== '' ? $clickSource : 'bell_inbox', 0, 32),
+            'magento_version'    => mb_substr($this->productMetadata->getVersion(), 0, 32),
+            'panth_core_version' => mb_substr($this->getCoreVersion(), 0, 32),
+            'php_version'        => mb_substr(PHP_VERSION, 0, 32),
+            'user_agent'         => mb_substr(
+                (string) ($this->request->getServer('HTTP_USER_AGENT', '') ?? ''),
+                0,
+                self::USER_AGENT_MAX_LENGTH
+            ),
+            'clicked_at'         => gmdate('Y-m-d\TH:i:s\Z'),
+        ];
+        return array_filter($payload, static fn ($v) => $v !== '' && $v !== null);
+    }
+
+    private function getSiteName(): string
+    {
+        try {
+            return mb_substr((string) $this->storeManager->getStore()->getName(), 0, 255);
+        } catch (\Throwable) {
+            return '';
+        }
+    }
+
+    private function getRefererUrl(): string
+    {
+        $ref = (string) ($this->request->getServer('HTTP_REFERER', '') ?? '');
+        if ($ref !== '' && !preg_match('#^https?://#i', $ref)) {
+            return '';
+        }
+        return mb_substr($ref, 0, 1024);
+    }
+
+    private function getCoreVersion(): string
+    {
+        try {
+            $info = $this->moduleList->getOne('Panth_Core');
+            return is_array($info) && !empty($info['setup_version'])
+                ? (string) $info['setup_version']
+                : '0.0.0';
+        } catch (\Throwable) {
+            return '0.0.0';
         }
     }
 }

@@ -7,6 +7,7 @@ declare(strict_types=1);
 namespace Panth\Core\Service;
 
 use Magento\AdminNotification\Model\InboxFactory;
+use Magento\Framework\App\ResourceConnection;
 use Magento\Framework\HTTP\Client\Curl;
 use Magento\Framework\Module\ModuleListInterface;
 use Magento\Framework\Notification\MessageInterface;
@@ -85,6 +86,7 @@ class NotificationsFetcher
         private readonly SerializerInterface $serializer,
         private readonly ModuleListInterface $moduleList,
         private readonly StoreManagerInterface $storeManager,
+        private readonly ResourceConnection $resource,
         private readonly LoggerInterface $logger
     ) {
     }
@@ -107,7 +109,7 @@ class NotificationsFetcher
             return ['status' => 'error', 'error' => 'malformed'];
         }
 
-        $rows = [];
+        $inboxRows = [];
         $skipped = 0;
         $clickProxyBase = $this->resolveClickProxyBase();
         foreach (array_slice($payload['messages'], 0, self::MAX_MESSAGES_PER_FETCH) as $msg) {
@@ -124,20 +126,112 @@ class NotificationsFetcher
                 $skipped++;
                 continue;
             }
-            $rows[] = $row;
+            $inboxRows[] = $row;
+
+            // Mirror the message to our local table so popup / banner
+            // rendering has access to the rich metadata (image, body_html,
+            // CTAs, flags) that doesn't fit Magento's native inbox schema.
+            $this->upsertLocalRow($msg, $row);
         }
 
-        if (empty($rows)) {
+        if (empty($inboxRows)) {
             return ['status' => 'ok', 'fetched' => 0, 'skipped' => $skipped];
         }
 
         try {
-            $this->inboxFactory->create()->parse($rows);
+            $this->inboxFactory->create()->parse($inboxRows);
         } catch (\Throwable $e) {
             $this->logger->error('[panth_core] inbox parse failed', ['error' => $e->getMessage()]);
             return ['status' => 'error', 'error' => 'inbox_parse_failed'];
         }
-        return ['status' => 'ok', 'fetched' => count($rows), 'skipped' => $skipped];
+        return ['status' => 'ok', 'fetched' => count($inboxRows), 'skipped' => $skipped];
+    }
+
+    /**
+     * Insert-or-update one row in panth_core_notification using the rich
+     * publisher fields that don't fit the Magento inbox schema.
+     *
+     * @param array<string,mixed> $msg Original feed message
+     * @param array{severity:int,date_added:string,title:string,description:string,url:string} $inboxRow
+     */
+    private function upsertLocalRow(array $msg, array $inboxRow): void
+    {
+        $messageId = trim((string) ($msg['id'] ?? ''));
+        if ($messageId === '') {
+            return;
+        }
+
+        $rawUrl = trim((string) ($msg['url'] ?? ''));
+        if ($rawUrl !== '' && !preg_match('#^https?://#i', $rawUrl)) {
+            $rawUrl = '';
+        }
+
+        $secondary = $msg['secondary_cta'] ?? null;
+        $secondaryUrl = '';
+        $secondaryLabel = '';
+        if (is_array($secondary)) {
+            $secondaryUrl = trim((string) ($secondary['url'] ?? ''));
+            $secondaryLabel = trim((string) ($secondary['label'] ?? ''));
+            if ($secondaryUrl !== '' && !preg_match('#^https?://#i', $secondaryUrl)) {
+                $secondaryUrl = '';
+                $secondaryLabel = '';
+            }
+        }
+
+        $tags = $msg['tags'] ?? null;
+        if (is_array($tags)) {
+            $tags = implode(',', array_map(static fn ($t) => trim((string) $t), $tags));
+        } else {
+            $tags = (string) ($tags ?? '');
+        }
+        $tags = mb_substr(trim($tags), 0, 255);
+
+        $imageUrl = trim((string) ($msg['image_url'] ?? ''));
+        if ($imageUrl !== '' && !preg_match('#^https?://#i', $imageUrl)) {
+            $imageUrl = '';
+        }
+
+        $severityKey = strtolower((string) ($msg['severity'] ?? 'notice'));
+        if (!array_key_exists($severityKey, self::SEVERITY_MAP)) {
+            $severityKey = 'notice';
+        }
+
+        $now = gmdate('Y-m-d H:i:s');
+        $data = [
+            'message_id'          => $messageId,
+            'severity'            => $severityKey,
+            'title'               => $inboxRow['title'],
+            'description'         => $inboxRow['description'],
+            'body_html'           => $msg['body_html'] !== null && $msg['body_html'] !== '' ? (string) $msg['body_html'] : null,
+            'raw_url'             => $rawUrl !== '' ? $rawUrl : null,
+            'proxy_url'           => $inboxRow['url'] !== '' ? $inboxRow['url'] : null,
+            'image_url'           => $imageUrl !== '' ? $imageUrl : null,
+            'cta_label'           => $msg['cta_label'] ?? null
+                ? mb_substr(trim((string) $msg['cta_label']), 0, 64)
+                : null,
+            'secondary_cta_url'   => $secondaryUrl !== '' ? $secondaryUrl : null,
+            'secondary_cta_label' => $secondaryLabel !== '' ? mb_substr($secondaryLabel, 0, 64) : null,
+            'display_as_popup'    => !empty($msg['popup']) ? 1 : 0,
+            'pin_to_top'          => !empty($msg['pinned']) ? 1 : 0,
+            'tags'                => $tags !== '' ? $tags : null,
+            'date_added'          => $inboxRow['date_added'],
+            'updated_at'          => $now,
+        ];
+
+        try {
+            $connection = $this->resource->getConnection();
+            $tableName = $this->resource->getTableName('panth_core_notification');
+            $connection->insertOnDuplicate(
+                $tableName,
+                $data,
+                array_keys(array_diff_key($data, ['message_id' => true, 'fetched_at' => true]))
+            );
+        } catch (\Throwable $e) {
+            $this->logger->info('[panth_core] local notification upsert failed', [
+                'message_id' => $messageId,
+                'error'      => $e->getMessage(),
+            ]);
+        }
     }
 
     private function downloadFeed(string $url): ?array
@@ -308,8 +402,29 @@ class NotificationsFetcher
         return $proxyBase . '?' . $query;
     }
 
+    /**
+     * Resolve Panth_Core's version. We prefer Composer's InstalledVersions
+     * (always present in Composer 2 and matches the actual deployed package
+     * version) over module.xml's `setup_version` attribute, which most
+     * declarative-schema modules — including Panth_Core — leave unset and
+     * therefore would always read as "0.0.0", causing every feed message
+     * with a `min_core_version` filter to be silently skipped.
+     */
     private function getCoreVersion(): string
     {
+        if (class_exists(\Composer\InstalledVersions::class)) {
+            try {
+                $version = \Composer\InstalledVersions::getVersion('mage2kishan/module-core');
+                if (is_string($version) && $version !== '') {
+                    // Composer occasionally returns dev-main or x.y.z@commitish — strip
+                    // the @sha if present so version_compare() can do its job.
+                    $version = explode('@', $version, 2)[0];
+                    return ltrim($version, 'v');
+                }
+            } catch (\Throwable) {
+                // fall through
+            }
+        }
         $info = $this->moduleList->getOne('Panth_Core');
         return is_array($info) && !empty($info['setup_version'])
             ? (string) $info['setup_version']

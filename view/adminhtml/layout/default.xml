@@ -1,0 +1,22 @@
+<?xml version="1.0"?>
+<!--
+/**
+ * Copyright © Panth Infotech. All rights reserved.
+ *
+ * Mounts the Panth admin notifications block on every admin page.
+ * The block returns empty markup when the current admin user has no
+ * pending popup or banner messages, so the cost on quiet days is one
+ * extra DB query per page-load.
+ */
+-->
+<page xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+      xsi:noNamespaceSchemaLocation="urn:magento:framework:View/Layout/etc/page_configuration.xsd">
+    <body>
+        <referenceContainer name="page.wrapper">
+            <block class="Panth\Core\Block\Adminhtml\Notifications"
+                   name="panth.core.notifications"
+                   template="Panth_Core::notifications.phtml"
+                   before="-"/>
+        </referenceContainer>
+    </body>
+</page>

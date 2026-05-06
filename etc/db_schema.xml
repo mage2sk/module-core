@@ -1,0 +1,78 @@
+<?xml version="1.0"?>
+<!--
+/**
+ * Copyright © Panth Infotech. All rights reserved.
+ *
+ * Local mirror of fetched Panth notifications + per-admin display state.
+ *
+ * Why a local table? Magento's native AdminNotification inbox stores
+ * severity/title/description/url and nothing else. The publisher feed
+ * carries richer metadata (image_url, cta_label, secondary_cta,
+ * body_html, popup/pin flags, tags) used to render popups + top
+ * banners — those need a home of their own, separate from the inbox.
+ *
+ * The display-state table tracks how many times each admin user has
+ * SEEN each popup and whether they've dismissed it, so "show on login
+ * a few times then stop" works per-admin-user.
+ */
+-->
+<schema xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:noNamespaceSchemaLocation="urn:magento:framework:Setup/Declaration/Schema/etc/schema.xsd">
+
+    <table name="panth_core_notification" resource="default" engine="innodb"
+           comment="Local mirror of Panth notifications fetched from the publisher feed">
+        <column xsi:type="bigint" name="entity_id" padding="20" unsigned="true" nullable="false" identity="true" comment="Entity ID"/>
+        <column xsi:type="varchar" name="message_id" length="190" nullable="false" comment="Stable public message ID from the feed"/>
+        <column xsi:type="varchar" name="severity" length="16" nullable="false" default="notice" comment="critical|major|minor|notice"/>
+        <column xsi:type="varchar" name="title" length="255" nullable="false" comment="Title"/>
+        <column xsi:type="text" name="description" nullable="false" comment="Body (plain text)"/>
+        <column xsi:type="text" name="body_html" nullable="true" comment="Optional rich HTML for popup mode"/>
+        <column xsi:type="varchar" name="raw_url" length="1024" nullable="true" comment="Original publisher URL before click-proxy wrap"/>
+        <column xsi:type="varchar" name="proxy_url" length="1024" nullable="true" comment="Click-proxy URL stored in the inbox (panth_core/click/index?...)"/>
+        <column xsi:type="varchar" name="image_url" length="1024" nullable="true" comment="Optional thumbnail image URL"/>
+        <column xsi:type="varchar" name="cta_label" length="64" nullable="true" comment="Primary CTA label override"/>
+        <column xsi:type="varchar" name="secondary_cta_url" length="1024" nullable="true" comment="Secondary CTA URL"/>
+        <column xsi:type="varchar" name="secondary_cta_label" length="64" nullable="true" comment="Secondary CTA label"/>
+        <column xsi:type="smallint" name="display_as_popup" padding="2" unsigned="true" nullable="false" default="0" comment="Render as login popup on consumer admin"/>
+        <column xsi:type="smallint" name="pin_to_top" padding="2" unsigned="true" nullable="false" default="0" comment="Render as top banner on consumer admin"/>
+        <column xsi:type="varchar" name="tags" length="255" nullable="true" comment="Comma-separated tags"/>
+        <column xsi:type="timestamp" name="date_added" nullable="true" comment="Publisher-side date_added (UTC)"/>
+        <column xsi:type="timestamp" name="fetched_at" nullable="false" default="CURRENT_TIMESTAMP" comment="When this row first arrived"/>
+        <column xsi:type="timestamp" name="updated_at" on_update="true" nullable="false" default="CURRENT_TIMESTAMP" comment="Last refreshed from feed"/>
+        <constraint xsi:type="primary" referenceId="PRIMARY">
+            <column name="entity_id"/>
+        </constraint>
+        <constraint xsi:type="unique" referenceId="PANTH_CORE_NOTIFICATION_MESSAGE_ID">
+            <column name="message_id"/>
+        </constraint>
+        <index referenceId="PANTH_CORE_NOTIFICATION_FLAGS" indexType="btree">
+            <column name="display_as_popup"/>
+            <column name="pin_to_top"/>
+        </index>
+        <index referenceId="PANTH_CORE_NOTIFICATION_DATE_ADDED" indexType="btree">
+            <column name="date_added"/>
+        </index>
+    </table>
+
+    <table name="panth_core_notification_display" resource="default" engine="innodb"
+           comment="Per-admin-user display state (popup show count + dismissals)">
+        <column xsi:type="bigint" name="entity_id" padding="20" unsigned="true" nullable="false" identity="true" comment="Entity ID"/>
+        <column xsi:type="int" name="admin_user_id" padding="10" unsigned="true" nullable="false" comment="admin_user.user_id"/>
+        <column xsi:type="varchar" name="message_id" length="190" nullable="false" comment="panth_core_notification.message_id"/>
+        <column xsi:type="int" name="shown_count" padding="10" unsigned="true" nullable="false" default="0" comment="How many times the popup has been shown to this admin"/>
+        <column xsi:type="timestamp" name="last_shown_at" nullable="true" comment="Last time the popup was rendered for this admin"/>
+        <column xsi:type="timestamp" name="dismissed_at" nullable="true" comment="When the admin dismissed the message (null = active)"/>
+        <column xsi:type="timestamp" name="created_at" nullable="false" default="CURRENT_TIMESTAMP" comment="Row created at"/>
+        <constraint xsi:type="primary" referenceId="PRIMARY">
+            <column name="entity_id"/>
+        </constraint>
+        <constraint xsi:type="unique" referenceId="PANTH_CORE_NOTIF_DISPLAY_USER_MSG">
+            <column name="admin_user_id"/>
+            <column name="message_id"/>
+        </constraint>
+        <index referenceId="PANTH_CORE_NOTIF_DISPLAY_DISMISSED" indexType="btree">
+            <column name="dismissed_at"/>
+        </index>
+    </table>
+
+</schema>
