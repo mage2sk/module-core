@@ -76,7 +76,7 @@ $formKey      = $block->getFormKey();
         <?php if ($proxyUrl): ?>
             <a class="panth-notif-bar__cta"
                href="<?= $escaper->escapeUrl($proxyUrl) ?><?= str_contains($proxyUrl, '?') ? '&' : '?' ?>src=top_bar"
-               rel="noopener"><?= $escaper->escapeHtml($ctaLabel) ?></a>
+               target="_blank" rel="noopener noreferrer"><?= $escaper->escapeHtml($ctaLabel) ?></a>
         <?php endif; ?>
         <button type="button" class="panth-notif-bar__close" data-panth-dismiss aria-label="<?= $escaper->escapeHtmlAttr(__('Dismiss')) ?>">×</button>
     </div>
@@ -121,13 +121,13 @@ $popupSecondaryLabel = (string) $popup->getData('secondary_cta_label');
             <?php if ($popupSecondaryUrl !== '' && $popupSecondaryLabel !== ''): ?>
                 <a class="panth-notif-modal__btn panth-notif-modal__btn--secondary"
                    href="<?= $escaper->escapeUrl($popupSecondaryUrl) ?>"
-                   rel="noopener"
+                   target="_blank" rel="noopener noreferrer"
                    data-panth-secondary><?= $escaper->escapeHtml($popupSecondaryLabel) ?></a>
             <?php endif; ?>
             <?php if ($popupProxy): ?>
                 <a class="panth-notif-modal__btn panth-notif-modal__btn--primary"
                    href="<?= $escaper->escapeUrl($popupProxy) ?><?= str_contains($popupProxy, '?') ? '&' : '?' ?>src=popup"
-                   rel="noopener"
+                   target="_blank" rel="noopener noreferrer"
                    data-panth-cta><?= $escaper->escapeHtml($popupCta) ?></a>
             <?php else: ?>
                 <button type="button" class="panth-notif-modal__btn panth-notif-modal__btn--primary" data-panth-dismiss><?= $escaper->escapeHtml(__('Got it')) ?></button>
