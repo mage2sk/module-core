@@ -2,7 +2,7 @@
     "name": "mage2kishan/module-core",
     "description": "Panth Core — base module providing shared utilities, admin configuration helpers, the optional ThemeBuildExecutorInterface contract, and the panth_modules registry used by every other Panth extension. Required dependency for all Panth Infotech extensions on the Magento Marketplace.",
     "type": "magento2-module",
-    "version": "1.0.10",
+    "version": "1.0.11",
     "license": "proprietary",
     "keywords": [
         "magento2",
