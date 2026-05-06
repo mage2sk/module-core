@@ -45,6 +45,13 @@
                 <value id="google-analytics" type="host">www.google-analytics.com</value>
                 <value id="googletagmanager" type="host">www.googletagmanager.com</value>
                 <value id="cdn-jsdelivr" type="host">cdn.jsdelivr.net</value>
+                <!-- Notification descriptions may embed screenshots / icons hosted
+                     on the publisher origin (kishansavaliya.com). The actual
+                     feed-fetch is server-side and unaffected by CSP, but if a
+                     description contains <img src="https://kishansavaliya.com/...">
+                     and the admin opens it in the bell-icon dropdown, the
+                     browser needs this whitelist entry. -->
+                <value id="panth-publisher" type="host">kishansavaliya.com</value>
             </values>
         </policy>
 
@@ -54,6 +61,10 @@
                 <value id="js-mollie" type="host">js.mollie.com</value>
                 <value id="google-analytics" type="host">www.google-analytics.com</value>
                 <value id="googletagmanager" type="host">www.googletagmanager.com</value>
+                <!-- Reserved for any future browser-side AJAX from the admin
+                     UI to the publisher (manual-fetch button, live preview,
+                     etc.) — server-side cron never goes through CSP. -->
+                <value id="panth-publisher" type="host">kishansavaliya.com</value>
             </values>
         </policy>
 

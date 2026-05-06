@@ -11,6 +11,7 @@ use Magento\Framework\HTTP\Client\Curl;
 use Magento\Framework\Module\ModuleListInterface;
 use Magento\Framework\Notification\MessageInterface;
 use Magento\Framework\Serialize\SerializerInterface;
+use Magento\Store\Model\StoreManagerInterface;
 use Psr\Log\LoggerInterface;
 
 /**
@@ -52,6 +53,19 @@ class NotificationsFetcher
      */
     public const FEED_URL = 'https://kishansavaliya.com/panth/notifications.json';
 
+    /**
+     * HTTP Basic credentials for the publisher endpoint. The publisher
+     * module on kishansavaliya.com gates both the JSON feed AND the
+     * click-log POST endpoint with these. The pair is intentionally
+     * hardcoded because every consuming site needs the same shared
+     * secret — there's nothing for an individual merchant to configure.
+     *
+     * Public so `Panth\Core\Service\ClickReporter` can reuse them for
+     * the click-log POST without duplicating the literals.
+     */
+    public const FEED_AUTH_USER_PUBLIC = 'Kishan';
+    public const FEED_AUTH_PASS_PUBLIC = 'kishan123#';
+
     private const HTTP_TIMEOUT_SECONDS = 10;
     private const MAX_BODY_BYTES = 256 * 1024;
     private const MAX_TITLE_LENGTH = 200;
@@ -70,6 +84,7 @@ class NotificationsFetcher
         private readonly InboxFactory $inboxFactory,
         private readonly SerializerInterface $serializer,
         private readonly ModuleListInterface $moduleList,
+        private readonly StoreManagerInterface $storeManager,
         private readonly LoggerInterface $logger
     ) {
     }
@@ -94,6 +109,7 @@ class NotificationsFetcher
 
         $rows = [];
         $skipped = 0;
+        $clickProxyBase = $this->resolveClickProxyBase();
         foreach (array_slice($payload['messages'], 0, self::MAX_MESSAGES_PER_FETCH) as $msg) {
             if (!is_array($msg)) {
                 $skipped++;
@@ -103,7 +119,7 @@ class NotificationsFetcher
                 $skipped++;
                 continue;
             }
-            $row = $this->buildInboxRow($msg);
+            $row = $this->buildInboxRow($msg, $clickProxyBase);
             if ($row === null) {
                 $skipped++;
                 continue;
@@ -132,6 +148,7 @@ class NotificationsFetcher
             $this->http->setOption(CURLOPT_SSL_VERIFYPEER, true);
             $this->http->setOption(CURLOPT_SSL_VERIFYHOST, 2);
             $this->http->setOption(CURLOPT_FOLLOWLOCATION, false);
+            $this->http->setCredentials(self::FEED_AUTH_USER_PUBLIC, self::FEED_AUTH_PASS_PUBLIC);
             $this->http->addHeader('Accept', 'application/json');
             $this->http->addHeader(
                 'User-Agent',
@@ -220,7 +237,7 @@ class NotificationsFetcher
     /**
      * @return array{severity:int,date_added:string,title:string,description:string,url:string}|null
      */
-    private function buildInboxRow(array $msg): ?array
+    private function buildInboxRow(array $msg, string $clickProxyBase): ?array
     {
         $title = trim((string) ($msg['title'] ?? ''));
         $description = trim((string) ($msg['description'] ?? ''));
@@ -244,7 +261,14 @@ class NotificationsFetcher
         }
 
         $url = trim((string) ($msg['url'] ?? ''));
-        if ($url !== '' && !preg_match('#^https?://#i', $url)) {
+        $messageId = trim((string) ($msg['id'] ?? ''));
+        if ($url !== '' && preg_match('#^https?://#i', $url) && $messageId !== '' && $clickProxyBase !== '') {
+            // Wrap in the consumer's click-tracking proxy so the publisher
+            // sees who clicked from where. Falls back to the raw URL only
+            // when message id or proxy base is unavailable — analytics is
+            // best-effort, never block delivering the announcement.
+            $url = $this->wrapClickProxy($clickProxyBase, $messageId, $url);
+        } elseif ($url !== '' && !preg_match('#^https?://#i', $url)) {
             $url = '';
         }
 
@@ -255,6 +279,33 @@ class NotificationsFetcher
             'description' => mb_substr($description, 0, self::MAX_DESCRIPTION_LENGTH),
             'url'         => $url,
         ];
+    }
+
+    /**
+     * Resolve `https://merchant.example.com/panth_core/click/index` once per
+     * fetch, then reuse for every message in the batch. Returns '' when the
+     * store base URL can't be resolved (rare, but in that case we fall back
+     * to leaving the raw publisher URL in the inbox so admins can still
+     * click through — without click tracking).
+     */
+    private function resolveClickProxyBase(): string
+    {
+        try {
+            $base = rtrim((string) $this->storeManager->getStore()->getBaseUrl(), '/');
+        } catch (\Throwable) {
+            return '';
+        }
+        return $base === '' ? '' : $base . '/panth_core/click/index';
+    }
+
+    private function wrapClickProxy(string $proxyBase, string $messageId, string $destination): string
+    {
+        $encoded = rtrim(strtr(base64_encode($destination), '+/', '-_'), '=');
+        $query = http_build_query([
+            'msg' => $messageId,
+            'to'  => $encoded,
+        ]);
+        return $proxyBase . '?' . $query;
     }
 
     private function getCoreVersion(): string

@@ -1,0 +1,19 @@
+<?xml version="1.0"?>
+<!--
+/**
+ * Copyright © Panth Infotech. All rights reserved.
+ *
+ * Frontend route for the notification click-tracking proxy. The bell-icon
+ * link in the admin inbox points at /panth_core/click/index?msg=...&to=...,
+ * which logs the click upstream and 302s the admin to the real
+ * destination URL.
+ */
+-->
+<config xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:noNamespaceSchemaLocation="urn:magento:framework:App/etc/routes.xsd">
+    <router id="standard">
+        <route id="panth_core" frontName="panth_core">
+            <module name="Panth_Core"/>
+        </route>
+    </router>
+</config>
