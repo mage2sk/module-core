@@ -20,5 +20,10 @@
         <job name="panth_core_weekly_usage_report" instance="Panth\Core\Cron\WeeklyUsageReport" method="execute">
             <schedule>0 3 * * 1</schedule> <!-- Every Monday at 3 AM -->
         </job>
+        <!-- Daily notifications fetch — pulls Panth advisories/announcements
+             into Magento's admin inbox (the bell icon). Off-peak schedule. -->
+        <job name="panth_core_fetch_notifications" instance="Panth\Core\Cron\FetchNotifications" method="execute">
+            <schedule>15 4 * * *</schedule>
+        </job>
     </group>
 </config>

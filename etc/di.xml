@@ -19,4 +19,13 @@
          which would block standalone installation from Marketplace. -->
     <preference for="Panth\Core\Api\ThemeBuildExecutorInterface"
                 type="Panth\Core\Model\NoopThemeBuildExecutor"/>
+
+    <!-- Notifications fetcher CLI command. Cron is wired in etc/crontab.xml. -->
+    <type name="Magento\Framework\Console\CommandList">
+        <arguments>
+            <argument name="commands" xsi:type="array">
+                <item name="panth_core_notifications_fetch" xsi:type="object">Panth\Core\Console\Command\FetchNotificationsCommand</item>
+            </argument>
+        </arguments>
+    </type>
 </config>

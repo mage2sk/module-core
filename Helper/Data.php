@@ -75,4 +75,5 @@ class Data extends AbstractHelper
             $this->_logger->info('Panth Core: ' . $message, $context);
         }
     }
+
 }
