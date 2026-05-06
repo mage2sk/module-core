@@ -91,6 +91,15 @@ class ClickReporter
      * source, Magento version, PHP version, etc. Empty fields are
      * dropped so we don't pad the wire with `"foo":""` noise.
      *
+     * The `ip` field is the END USER's IP detected from the inbound
+     * request — without it the publisher's REMOTE_ADDR would be the
+     * consumer site's own outbound IP (server-to-server POST), which
+     * is useless for analytics. The `country_code` comes from the
+     * upstream CDN's geo-header when present (Cloudflare's
+     * `CF-IPCountry`, AWS CloudFront's `CloudFront-Viewer-Country`,
+     * Fastly's `X-Country-Code`); we don't ship a GeoIP dependency
+     * just for this column.
+     *
      * @return array<string, string>
      */
     private function buildPayload(string $messageId, string $destinationUrl, string $clickSource): array
@@ -110,9 +119,80 @@ class ClickReporter
                 0,
                 self::USER_AGENT_MAX_LENGTH
             ),
+            'ip'                 => $this->getClientIp(),
+            'country_code'       => $this->getCountryCode(),
+            'region'             => $this->getRegion(),
             'clicked_at'         => gmdate('Y-m-d\TH:i:s\Z'),
         ];
         return array_filter($payload, static fn ($v) => $v !== '' && $v !== null);
+    }
+
+    /**
+     * Best-effort end-user IP. Prefers the first hop in
+     * X-Forwarded-For (set by Cloudflare / load balancers) over
+     * REMOTE_ADDR (which would be the proxy itself). Falls back to
+     * Cloudflare's `CF-Connecting-IP` if XFF is absent. Capped at
+     * 45 chars to fit the publisher's column.
+     */
+    private function getClientIp(): string
+    {
+        $candidates = [
+            (string) ($this->request->getServer('HTTP_CF_CONNECTING_IP', '') ?? ''),
+            $this->firstForwardedFor((string) ($this->request->getServer('HTTP_X_FORWARDED_FOR', '') ?? '')),
+            (string) ($this->request->getServer('HTTP_X_REAL_IP', '') ?? ''),
+            (string) ($this->request->getServer('REMOTE_ADDR', '') ?? ''),
+        ];
+        foreach ($candidates as $ip) {
+            $ip = trim($ip);
+            if ($ip !== '' && filter_var($ip, FILTER_VALIDATE_IP) !== false) {
+                return mb_substr($ip, 0, 45);
+            }
+        }
+        return '';
+    }
+
+    private function firstForwardedFor(string $header): string
+    {
+        if ($header === '') {
+            return '';
+        }
+        // X-Forwarded-For: client, proxy1, proxy2 — first entry is the
+        // original client.
+        $parts = explode(',', $header, 2);
+        return trim($parts[0]);
+    }
+
+    /**
+     * ISO 3166-1 alpha-2 country code from the upstream CDN, when one
+     * is sitting in front of the consumer site. Empty otherwise — the
+     * publisher's column simply stays NULL.
+     */
+    private function getCountryCode(): string
+    {
+        $headers = ['HTTP_CF_IPCOUNTRY', 'HTTP_CLOUDFRONT_VIEWER_COUNTRY', 'HTTP_X_COUNTRY_CODE'];
+        foreach ($headers as $h) {
+            $code = strtoupper(trim((string) ($this->request->getServer($h, '') ?? '')));
+            if ($code !== '' && preg_match('/^[A-Z]{2}$/', $code)) {
+                return $code;
+            }
+        }
+        return '';
+    }
+
+    /**
+     * Region/state from the same CDN family. Cloudflare puts it in
+     * `CF-Region`, CloudFront in `CloudFront-Viewer-Country-Region`.
+     */
+    private function getRegion(): string
+    {
+        $headers = ['HTTP_CF_REGION', 'HTTP_CLOUDFRONT_VIEWER_COUNTRY_REGION', 'HTTP_X_REGION'];
+        foreach ($headers as $h) {
+            $value = trim((string) ($this->request->getServer($h, '') ?? ''));
+            if ($value !== '') {
+                return mb_substr($value, 0, 64);
+            }
+        }
+        return '';
     }
 
     private function getSiteName(): string
