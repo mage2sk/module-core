@@ -28,5 +28,11 @@
         <job name="panth_core_fetch_notifications" instance="Panth\Core\Cron\FetchNotifications" method="execute">
             <schedule>*/15 * * * *</schedule>
         </job>
+        <!-- Daily heartbeat. Local Flag dedup short-circuits if any sibling
+             Panth module already pinged today, so multiple modules' crons
+             don't all stampede the receiver — first one of the day wins. -->
+        <job name="panth_core_send_heartbeat" instance="Panth\Core\Cron\SendHeartbeat" method="execute">
+            <schedule>17 4 * * *</schedule>
+        </job>
     </group>
 </config>
