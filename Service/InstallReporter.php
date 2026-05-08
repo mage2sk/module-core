@@ -23,9 +23,11 @@ namespace Panth\Core\Service;
 
 use Magento\Framework\App\Config\ScopeConfigInterface;
 use Magento\Framework\App\ProductMetadataInterface;
-use Magento\Framework\FlagFactory;
+use Magento\Framework\Component\ComponentRegistrar;
+use Magento\Framework\Component\ComponentRegistrarInterface;
 use Magento\Framework\FlagManager;
 use Magento\Framework\Module\ModuleListInterface;
+use Magento\Framework\Module\PackageInfo;
 use Magento\Framework\UrlInterface;
 use Magento\Store\Model\StoreManagerInterface;
 use Psr\Log\LoggerInterface;
@@ -50,8 +52,10 @@ class InstallReporter
         private readonly StoreManagerInterface $storeManager,
         private readonly ProductMetadataInterface $productMetadata,
         private readonly ModuleListInterface $moduleList,
+        private readonly PackageInfo $packageInfo,
         private readonly ScopeConfigInterface $scopeConfig,
         private readonly FlagManager $flagManager,
+        private readonly ComponentRegistrarInterface $componentRegistrar,
         private readonly LoggerInterface $logger
     ) {
     }
@@ -63,8 +67,10 @@ class InstallReporter
     public function reportInstall(): void
     {
         try {
-            $module = $this->moduleList->getOne(self::MAGENTO_MODULE);
-            $version = (string)($module['setup_version'] ?? '');
+            if (!function_exists('curl_init')) {
+                return;
+            }
+            $version = (string)$this->packageInfo->getVersion(self::MAGENTO_MODULE);
             if ($version === '') {
                 return;
             }
@@ -102,6 +108,9 @@ class InstallReporter
     public function reportHeartbeat(): void
     {
         try {
+            if (!function_exists('curl_init')) {
+                return;
+            }
             $today = gmdate('Ymd');
             $flagCode = 'panth_' . strtolower(self::MAGENTO_MODULE) . '_heartbeat_' . $today;
             if ($this->flagManager->getFlagData($flagCode)) {
@@ -131,7 +140,7 @@ class InstallReporter
         $siteName = $store ? (string)$store->getName() : '';
 
         $coreModule = $this->moduleList->getOne('Panth_Core');
-        $coreVersion = $coreModule ? (string)($coreModule['setup_version'] ?? '') : '';
+        $coreVersion = $coreModule ? (string)$this->packageInfo->getVersion('Panth_Core') : '';
         $corePresent = (bool)$coreModule;
 
         return [
@@ -149,7 +158,13 @@ class InstallReporter
     /**
      * Snapshot of every currently-enabled Panth_* module.
      *
-     * @return list<array{composer_package:?string, magento_module:string, version:string}>
+     * Receiver-side reconciliation requires each entry to have
+     * composer_package, magento_module AND version as non-empty strings;
+     * any entry missing one of those is silently dropped on the receiver.
+     * We resolve composer_package by reading each module's composer.json
+     * directly off disk (cheap — once per heartbeat, ~50 small file reads).
+     *
+     * @return list<array{composer_package:string, magento_module:string, version:string}>
      */
     private function collectActivePanthModules(): array
     {
@@ -158,15 +173,48 @@ class InstallReporter
             if (!str_starts_with($name, 'Panth_')) {
                 continue;
             }
-            $info = $this->moduleList->getOne($name) ?: [];
+            $version = (string)$this->packageInfo->getVersion($name);
+            $package = $this->resolveComposerPackage($name);
+            if ($version === '' || $package === '') {
+                continue; // receiver would drop it anyway
+            }
             $out[] = [
                 'magento_module'   => $name,
-                'version'          => (string)($info['setup_version'] ?? ''),
-                'composer_package' => null, // not exposed by ModuleListInterface; left null
+                'version'          => $version,
+                'composer_package' => $package,
             ];
         }
         sort($out);
         return $out;
+    }
+
+    /**
+     * Resolve the composer package name for a Magento module by reading
+     * the composer.json file at the module path. Returns "" if the file
+     * is missing or unreadable so the entry is filtered out.
+     */
+    private function resolveComposerPackage(string $magentoModule): string
+    {
+        try {
+            $path = $this->componentRegistrar->getPath(ComponentRegistrar::MODULE, $magentoModule);
+            if (!$path) {
+                return '';
+            }
+            $composerPath = rtrim($path, '/') . '/composer.json';
+            if (!is_readable($composerPath)) {
+                return '';
+            }
+            $raw = (string)@file_get_contents($composerPath);
+            if ($raw === '') {
+                return '';
+            }
+            $data = json_decode($raw, true);
+            return is_array($data) && isset($data['name']) && is_string($data['name'])
+                ? $data['name']
+                : '';
+        } catch (\Throwable) {
+            return '';
+        }
     }
 
     /**
