@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+/**
+ * Panth Modules Registry XSD Schema
+ */
+-->
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema">
+    <xs:element name="config">
+        <xs:complexType>
+            <xs:sequence>
+                <xs:element name="modules" type="modulesType"/>
+            </xs:sequence>
+        </xs:complexType>
+    </xs:element>
+
+    <xs:complexType name="modulesType">
+        <xs:sequence>
+            <xs:element name="module" type="moduleType" minOccurs="0" maxOccurs="unbounded"/>
+        </xs:sequence>
+    </xs:complexType>
+
+    <xs:complexType name="moduleType">
+        <xs:attribute name="name" type="xs:string" use="required"/>
+        <xs:attribute name="config_section" type="xs:string" use="required"/>
+        <xs:attribute name="enabled" type="xs:boolean" use="optional" default="true"/>
+    </xs:complexType>
+</xs:schema>

@@ -1,0 +1,48 @@
+<?xml version="1.0"?>
+<!--
+/**
+ * Panth Modules Registry
+ * Central configuration for all Panth modules
+ * This eliminates the need for individual License Helpers and Observers in each module
+ */
+-->
+<config xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:noNamespaceSchemaLocation="urn:magento:module:Panth_Core:etc/panth_modules.xsd">
+    <modules>
+        <!-- Core Module -->
+        <module name="Panth_Core" config_section="panth_core" enabled="1"/>
+
+        <!-- Communication & Notification -->
+        <module name="Panth_WhatsApp" config_section="panth_whatsapp" enabled="1"/>
+        <module name="Panth_LowStockNotification" config_section="lowstocknotification" enabled="1"/>
+        <module name="Panth_PriceDropAlert" config_section="pricedropalert" enabled="1"/>
+        <module name="Panth_LiveActivity" config_section="live_activity" enabled="1"/>
+
+        <!-- Menu & Navigation -->
+        <module name="Panth_MegaMenu" config_section="panth_megamenu" enabled="1"/>
+
+        <!-- Theme & Layout -->
+        <module name="Panth_Footer" config_section="panth_footer" enabled="1"/>
+        <module name="Panth_BannerSlider" config_section="panth_banner_slider" enabled="1"/>
+        <module name="Panth_ThemeCustomizer" config_section="theme_customizer" enabled="1"/>
+
+        <!-- Product Display -->
+        <module name="Panth_ProductCarousel" config_section="panth_productcarousel" enabled="1"/>
+        <module name="Panth_ProductGallery" config_section="panth_productgallery" enabled="1"/>
+        <module name="Panth_ProductSlider" config_section="product_slider" enabled="1"/>
+        <module name="Panth_ProductTabs" config_section="panth_producttabs" enabled="1"/>
+        <module name="Panth_QuickView" config_section="quickview" enabled="1"/>
+        <module name="Panth_SmartBadge" config_section="smart_badge" enabled="1"/>
+
+        <!-- Performance & Optimization -->
+        <module name="Panth_AssetMinifier" config_section="panth_assetminifier" enabled="1"/>
+        <module name="Panth_CoreWebVitals" config_section="panth_corewebvitals" enabled="1"/>
+        <module name="Panth_CacheManager" config_section="panth_cachemanager" enabled="1"/>
+        <module name="Panth_ImageOptimizer" config_section="panth_imageoptimizer" enabled="1"/>
+        <module name="Panth_PerformanceOptimizer" config_section="panth_performance" enabled="1"/>
+
+        <!-- Content -->
+        <module name="Panth_Faq" config_section="panth_faq" enabled="1"/>
+        <module name="Panth_ProductAttachments" config_section="panth_productattachments" enabled="1"/>
+    </modules>
+</config>

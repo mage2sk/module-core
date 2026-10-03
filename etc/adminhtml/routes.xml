@@ -1,0 +1,14 @@
+<?xml version="1.0"?>
+<!--
+/**
+ * Panth Core Admin Routes
+ */
+-->
+<config xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:noNamespaceSchemaLocation="urn:magento:framework:App/etc/routes.xsd">
+    <router id="admin">
+        <route id="panthcore" frontName="panthcore">
+            <module name="Panth_Core" />
+        </route>
+    </router>
+</config>

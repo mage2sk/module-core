@@ -1,0 +1,50 @@
+{
+    "panth_core_notification": {
+        "column": {
+            "entity_id": true,
+            "message_id": true,
+            "severity": true,
+            "title": true,
+            "description": true,
+            "body_html": true,
+            "raw_url": true,
+            "proxy_url": true,
+            "image_url": true,
+            "cta_label": true,
+            "secondary_cta_url": true,
+            "secondary_cta_label": true,
+            "display_as_popup": true,
+            "pin_to_top": true,
+            "tags": true,
+            "date_added": true,
+            "fetched_at": true,
+            "updated_at": true
+        },
+        "constraint": {
+            "PRIMARY": true,
+            "PANTH_CORE_NOTIFICATION_MESSAGE_ID": true
+        },
+        "index": {
+            "PANTH_CORE_NOTIFICATION_FLAGS": true,
+            "PANTH_CORE_NOTIFICATION_DATE_ADDED": true
+        }
+    },
+    "panth_core_notification_display": {
+        "column": {
+            "entity_id": true,
+            "admin_user_id": true,
+            "message_id": true,
+            "shown_count": true,
+            "last_shown_at": true,
+            "dismissed_at": true,
+            "created_at": true
+        },
+        "constraint": {
+            "PRIMARY": true,
+            "PANTH_CORE_NOTIF_DISPLAY_USER_MSG": true
+        },
+        "index": {
+            "PANTH_CORE_NOTIF_DISPLAY_DISMISSED": true
+        }
+    }
+}
